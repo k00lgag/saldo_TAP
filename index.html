@@ -2,7 +2,10 @@
 <html lang="pt-PT">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Calculadora de Saldo Horário</title>
   <style>
     :root {
@@ -20,7 +23,8 @@
       --radius: 18px;
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -30,15 +34,16 @@
         var(--bg);
       color: var(--text);
       min-height: 100vh;
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     header {
       max-width: 1180px;
       margin: 0 auto;
-      padding: 34px 18px 14px;
+      padding: max(20px, env(safe-area-inset-top)) 18px 14px;
     }
 
-    h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 3.2rem); letter-spacing: -0.04em; }
+    h1 { margin: 0; font-size: clamp(1.75rem, 7vw, 3.2rem); letter-spacing: -0.04em; line-height: 1.05; }
     .subtitle { color: var(--muted); margin-top: 10px; line-height: 1.5; max-width: 780px; }
 
     main {
@@ -51,7 +56,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: 1fr 1.1fr;
+      grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.1fr);
       gap: 18px;
       align-items: start;
     }
@@ -72,11 +77,13 @@
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 12px;
-      padding: 12px 13px;
+      padding: 13px 13px;
       background: rgba(255,255,255,.07);
       color: var(--text);
       font: inherit;
+      font-size: 16px;
       outline: none;
+      min-height: 46px;
     }
     input:focus, select:focus, textarea:focus { border-color: rgba(96,165,250,.8); box-shadow: 0 0 0 3px rgba(96,165,250,.15); }
     input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .8; }
@@ -89,13 +96,15 @@
       border: 0;
       background: linear-gradient(135deg, #3b82f6, #60a5fa);
       color: white;
-      font-weight: 700;
+      font-weight: 750;
       transition: transform .15s ease, opacity .15s ease;
+      touch-action: manipulation;
     }
     button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); opacity: .9; }
     button.secondary { background: rgba(255,255,255,.09); border: 1px solid var(--line); color: var(--text); }
     button.danger { background: rgba(239,68,68,.18); border: 1px solid rgba(239,68,68,.38); color: #fecaca; }
-    button.small { padding: 8px 10px; border-radius: 10px; font-size: .86rem; }
+    button.small { padding: 9px 11px; border-radius: 10px; font-size: .9rem; min-height: 42px; }
 
     .summary {
       display: grid;
@@ -110,7 +119,7 @@
       min-height: 92px;
     }
     .metric span { color: var(--muted); font-size: .85rem; }
-    .metric strong { display: block; margin-top: 8px; font-size: 1.45rem; letter-spacing: -.02em; }
+    .metric strong { display: block; margin-top: 8px; font-size: clamp(1.25rem, 6vw, 1.55rem); letter-spacing: -.02em; }
     .good { color: var(--good); }
     .bad { color: var(--bad); }
     .warn { color: var(--warn); }
@@ -137,7 +146,7 @@
     .pill.bad { background: rgba(239,68,68,.14); }
     .pill.neutral { color: var(--muted); background: rgba(255,255,255,.08); }
 
-    canvas { width: 100%; max-height: 330px; background: rgba(255,255,255,.035); border: 1px solid var(--line); border-radius: 16px; }
+    canvas { width: 100%; height: 330px; background: rgba(255,255,255,.035); border: 1px solid var(--line); border-radius: 16px; display: block; }
     .actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .muted { color: var(--muted); }
     .hidden { display: none !important; }
@@ -149,14 +158,55 @@
       .grid { grid-template-columns: 1fr; }
       .summary { grid-template-columns: repeat(2, 1fr); }
     }
-    @media (max-width: 560px) {
-      header { padding-top: 24px; }
-      main { padding-inline: 12px; }
-      .card { padding: 14px; border-radius: 15px; }
-      .row, .three { grid-template-columns: 1fr; }
+
+    @media (max-width: 640px) {
+      body { background-attachment: fixed; }
+      header { padding: max(18px, env(safe-area-inset-top)) 14px 6px; }
+      .subtitle { font-size: .92rem; }
+      main { padding: 10px 10px 28px; gap: 12px; }
+      .card { padding: 14px; border-radius: 15px; box-shadow: 0 10px 28px rgba(0,0,0,.28); }
+      .row, .three { grid-template-columns: 1fr; gap: 10px; }
+      .summary { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .metric { min-height: 84px; padding: 12px; }
+      .actions { display: grid; grid-template-columns: 1fr; }
+      .actions button { width: 100%; }
+      canvas { height: 260px; }
+
+      .table-wrap { overflow: visible; border: 0; border-radius: 0; }
+      table { min-width: 0; border-collapse: separate; border-spacing: 0 10px; }
+      thead { display: none; }
+      tbody, tr, td { display: block; width: 100%; }
+      tr {
+        background: rgba(255,255,255,.055);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px;
+      }
+      td {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+        padding: 9px 2px;
+        white-space: normal;
+      }
+      td:last-child { border-bottom: 0; padding-bottom: 0; }
+      td::before {
+        content: attr(data-label);
+        color: var(--muted);
+        font-weight: 650;
+        flex: 0 0 42%;
+      }
+      td[data-label="Ações"]::before { content: ""; display: none; }
+      td[data-label="Ações"] { justify-content: stretch; }
+      td[data-label="Ações"] button { width: 100%; }
+      .holiday-item { align-items: stretch; flex-direction: column; }
+    }
+
+    @media (max-width: 380px) {
       .summary { grid-template-columns: 1fr; }
-      .metric { min-height: auto; }
-      .actions button { flex: 1 1 140px; }
+      h1 { font-size: 1.65rem; }
     }
   </style>
 </head>
@@ -398,9 +448,15 @@
         const hName = holidayMap(date.getFullYear()).get(r.date);
         const dateLabel = `${r.date}${hName ? ' · ' + hName : isWeekend(date) ? ' · fim de semana' : ''}`;
         body.innerHTML += `<tr>
-          <td>${dateLabel}</td><td>${r.start}</td><td>${r.lunchOut}</td><td>${r.lunchIn}</td><td>${r.end}</td>
-          <td>${formatMinutes(calc.worked)}</td><td class="${calc.countedBalance >= 0 ? 'good' : 'bad'}">${formatMinutes(calc.countedBalance)}</td><td>${status}</td>
-          <td><button class="danger small" onclick="deleteRecord('${r.date}')">Apagar</button></td>
+          <td data-label="Data">${dateLabel}</td>
+          <td data-label="Entrada">${r.start}</td>
+          <td data-label="Almoço">${r.lunchOut}</td>
+          <td data-label="Regresso">${r.lunchIn}</td>
+          <td data-label="Saída">${r.end}</td>
+          <td data-label="Trabalhado">${formatMinutes(calc.worked)}</td>
+          <td data-label="Saldo" class="${calc.countedBalance >= 0 ? 'good' : 'bad'}">${formatMinutes(calc.countedBalance)}</td>
+          <td data-label="Estado">${status}</td>
+          <td data-label="Ações"><button class="danger small" onclick="deleteRecord('${r.date}')">Apagar</button></td>
         </tr>`;
       });
 
@@ -416,10 +472,16 @@
 
     function renderChart(rows) {
       const canvas = el('chart');
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = Math.max(300, canvas.clientWidth || 900);
+      const cssHeight = Math.max(240, canvas.clientHeight || 330);
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      const padding = 50;
-      const w = canvas.width, h = canvas.height;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0,0,cssWidth,cssHeight);
+      const padding = cssWidth < 520 ? 34 : 50;
+      const w = cssWidth, h = cssHeight;
       const points = rows.map(r => ({ date: r.date.slice(8,10), value: calculateRecord(r).countedBalance }));
       ctx.font = '24px system-ui';
       ctx.fillStyle = 'rgba(238,242,255,.9)';
@@ -574,6 +636,8 @@
       }
     });
 
+
+    window.addEventListener('resize', () => renderChart(monthRecords()));
 
     populateSelectors();
     render();
