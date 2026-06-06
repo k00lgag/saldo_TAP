@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Saldo Horário</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111c33;
+      --card2: #16233d;
+      --text: #eef2ff;
+      --muted: #a8b3cf;
+      --line: rgba(255,255,255,.12);
+      --accent: #60a5fa;
+      --good: #22c55e;
+      --bad: #ef4444;
+      --warn: #f59e0b;
+      --shadow: 0 18px 55px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(96,165,250,.24), transparent 34%),
+        radial-gradient(circle at top right, rgba(34,197,94,.12), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 34px 18px 14px;
+    }
+
+    h1 { margin: 0; font-size: clamp(1.8rem, 4vw, 3.2rem); letter-spacing: -0.04em; }
+    .subtitle { color: var(--muted); margin-top: 10px; line-height: 1.5; max-width: 780px; }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 14px 18px 40px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)), var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .card h2 { margin: 0 0 14px; font-size: 1.1rem; }
+
+    form { display: grid; gap: 12px; }
+    label { display: grid; gap: 7px; color: var(--muted); font-size: .92rem; }
+    input, select, button, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 13px;
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus { border-color: rgba(96,165,250,.8); box-shadow: 0 0 0 3px rgba(96,165,250,.15); }
+    input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .8; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: linear-gradient(135deg, #3b82f6, #60a5fa);
+      color: white;
+      font-weight: 700;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button.secondary { background: rgba(255,255,255,.09); border: 1px solid var(--line); color: var(--text); }
+    button.danger { background: rgba(239,68,68,.18); border: 1px solid rgba(239,68,68,.38); color: #fecaca; }
+    button.small { padding: 8px 10px; border-radius: 10px; font-size: .86rem; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .metric {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      min-height: 92px;
+    }
+    .metric span { color: var(--muted); font-size: .85rem; }
+    .metric strong { display: block; margin-top: 8px; font-size: 1.45rem; letter-spacing: -.02em; }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    .warn { color: var(--warn); }
+
+    .notice {
+      background: rgba(96,165,250,.1);
+      border: 1px solid rgba(96,165,250,.25);
+      border-radius: 14px;
+      padding: 12px;
+      color: #dbeafe;
+      line-height: 1.45;
+      font-size: .92rem;
+    }
+
+    .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 11px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    th { color: var(--muted); font-size: .82rem; font-weight: 650; background: rgba(255,255,255,.045); }
+    td { font-size: .92rem; }
+    tr:last-child td { border-bottom: 0; }
+
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; font-weight: 700; font-size: .78rem; }
+    .pill.good { background: rgba(34,197,94,.14); }
+    .pill.bad { background: rgba(239,68,68,.14); }
+    .pill.neutral { color: var(--muted); background: rgba(255,255,255,.08); }
+
+    canvas { width: 100%; max-height: 330px; background: rgba(255,255,255,.035); border: 1px solid var(--line); border-radius: 16px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+
+    .holiday-list { display: grid; gap: 8px; margin-top: 10px; }
+    .holiday-item { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: rgba(255,255,255,.055); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      header { padding-top: 24px; }
+      main { padding-inline: 12px; }
+      .card { padding: 14px; border-radius: 15px; }
+      .row, .three { grid-template-columns: 1fr; }
+      .summary { grid-template-columns: 1fr; }
+      .metric { min-height: auto; }
+      .actions button { flex: 1 1 140px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Saldo Horário</h1>
+    <p class="subtitle">Regista entradas, almoço e saídas. A app desconta 7h30 por dia útil, considera sempre 1h de almoço no mínimo, desconta almoço acima de 1h e só conta saldo positivo a partir dos 15 minutos extra.</p>
+  </header>
+
+  <main>
+    <section class="grid">
+      <div class="card">
+        <h2>Adicionar dia</h2>
+        <form id="entryForm">
+          <label>Data
+            <input id="date" type="date" required>
+          </label>
+          <div class="row">
+            <label>Entrada
+              <input id="start" type="time" required>
+            </label>
+            <label>Saída para almoço
+              <input id="lunchOut" type="time" required>
+            </label>
+          </div>
+          <div class="row">
+            <label>Entrada após almoço
+              <input id="lunchIn" type="time" required>
+            </label>
+            <label>Saída do trabalho
+              <input id="end" type="time" required>
+            </label>
+          </div>
+          <button type="submit">Guardar registo</button>
+        </form>
+        <p id="formMessage" class="notice hidden" style="margin-top:12px"></p>
+      </div>
+
+      <div class="card">
+        <h2>Resumo do mês</h2>
+        <div class="three">
+          <label>Mês
+            <select id="monthSelect"></select>
+          </label>
+          <label>Ano
+            <select id="yearSelect"></select>
+          </label>
+          <label>&nbsp;
+            <button id="todayBtn" type="button" class="secondary">Mês atual</button>
+          </label>
+        </div>
+        <div class="summary" style="margin-top:14px">
+          <div class="metric"><span>Saldo horário</span><strong id="balance">0m</strong></div>
+          <div class="metric"><span>Tempo extra feito</span><strong id="extraDone" class="good">0m</strong></div>
+          <div class="metric"><span>Tempo que deve</span><strong id="owed" class="bad">0m</strong></div>
+          <div class="metric"><span>Dias úteis registados</span><strong id="daysWorked">0</strong></div>
+        </div>
+        <p id="monthInfo" class="muted"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Gráfico mensal</h2>
+      <canvas id="chart" width="1100" height="360"></canvas>
+    </section>
+
+
+    <section class="card">
+      <h2>Passar dados entre PC e telemóvel</h2>
+      <p class="muted">Os dados ficam guardados apenas no navegador onde são inseridos. Para usar noutro dispositivo, exporta um backup no PC e importa-o no telemóvel.</p>
+      <div class="actions">
+        <button id="backupBtn" class="secondary small" type="button">Exportar backup JSON</button>
+        <button id="importBtn" class="secondary small" type="button">Importar backup JSON</button>
+        <input id="importFile" type="file" accept="application/json,.json" style="display:none">
+      </div>
+      <p id="backupMessage" class="notice hidden" style="margin-top:12px"></p>
+    </section>
+
+    <section class="card">
+      <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap">
+        <h2 style="margin:0">Registos</h2>
+        <div class="actions">
+          <button id="exportBtn" class="secondary small" type="button">Exportar CSV</button>
+          <button id="clearMonthBtn" class="danger small" type="button">Apagar mês</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-top:14px">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th><th>Entrada</th><th>Almoço</th><th>Regresso</th><th>Saída</th><th>Trabalhado</th><th>Saldo</th><th>Estado</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="recordsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Feriados</h2>
+      <p class="muted">A app inclui automaticamente feriados nacionais fixos e móveis de Portugal. Podes adicionar feriados locais/tolerâncias de ponto.</p>
+      <div class="row">
+        <label>Adicionar data
+          <input id="holidayDate" type="date">
+        </label>
+        <label>Nome
+          <input id="holidayName" type="text" placeholder="Ex.: Feriado municipal">
+        </label>
+      </div>
+      <button id="addHolidayBtn" class="secondary" type="button" style="margin-top:10px">Adicionar feriado</button>
+      <div id="holidayList" class="holiday-list"></div>
+    </section>
+  </main>
+
+  <script>
+    const WORK_DAY_MINUTES = 7 * 60 + 30;
+    const MIN_LUNCH_MINUTES = 60;
+    const POSITIVE_THRESHOLD = 15;
+    const STORAGE_KEY = 'saldoHorario.records.v1';
+    const HOLIDAY_KEY = 'saldoHorario.customHolidays.v1';
+
+    const el = id => document.getElementById(id);
+    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let customHolidays = JSON.parse(localStorage.getItem(HOLIDAY_KEY) || '[]');
+
+    const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function dateKey(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+    function parseDateKey(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+    function minutesFromTime(t) { const [h,m] = t.split(':').map(Number); return h * 60 + m; }
+    function formatMinutes(total) {
+      const sign = total < 0 ? '-' : '';
+      total = Math.abs(Math.round(total));
+      const h = Math.floor(total / 60);
+      const m = total % 60;
+      if (h === 0) return `${sign}${m}m`;
+      return `${sign}${h}h${pad(m)}`;
+    }
+    function saveRecords() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
+    function saveHolidays() { localStorage.setItem(HOLIDAY_KEY, JSON.stringify(customHolidays)); }
+
+    function easterDate(year) {
+      const a = year % 19;
+      const b = Math.floor(year / 100);
+      const c = year % 100;
+      const d = Math.floor(b / 4);
+      const e = b % 4;
+      const f = Math.floor((b + 8) / 25);
+      const g = Math.floor((b - f + 1) / 3);
+      const h = (19 * a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4);
+      const k = c % 4;
+      const l = (32 + 2 * e + 2 * i - h - k) % 7;
+      const m = Math.floor((a + 11 * h + 22 * l) / 451);
+      const month = Math.floor((h + l - 7 * m + 114) / 31);
+      const day = ((h + l - 7 * m + 114) % 31) + 1;
+      return new Date(year, month - 1, day);
+    }
+
+    function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
+
+    function portugalHolidays(year) {
+      const fixed = [
+        [`${year}-01-01`, 'Ano Novo'], [`${year}-04-25`, 'Dia da Liberdade'], [`${year}-05-01`, 'Dia do Trabalhador'],
+        [`${year}-06-10`, 'Dia de Portugal'], [`${year}-08-15`, 'Assunção de Nossa Senhora'], [`${year}-10-05`, 'Implantação da República'],
+        [`${year}-11-01`, 'Todos os Santos'], [`${year}-12-01`, 'Restauração da Independência'], [`${year}-12-08`, 'Imaculada Conceição'], [`${year}-12-25`, 'Natal']
+      ];
+      const easter = easterDate(year);
+      fixed.push([dateKey(addDays(easter, -2)), 'Sexta-feira Santa']);
+      fixed.push([dateKey(addDays(easter, 60)), 'Corpo de Deus']);
+      return fixed;
+    }
+
+    function holidayMap(year) {
+      const map = new Map(portugalHolidays(year));
+      customHolidays.forEach(h => {
+        if (h.date.startsWith(String(year))) map.set(h.date, h.name || 'Feriado personalizado');
+      });
+      return map;
+    }
+
+    function isWeekend(date) { const day = date.getDay(); return day === 0 || day === 6; }
+    function isHoliday(date) { return holidayMap(date.getFullYear()).has(dateKey(date)); }
+    function isCountedDay(date) { return !isWeekend(date) && !isHoliday(date); }
+
+    function calculateRecord(r) {
+      const start = minutesFromTime(r.start), out = minutesFromTime(r.lunchOut), back = minutesFromTime(r.lunchIn), end = minutesFromTime(r.end);
+      const lunch = Math.max(0, back - out);
+      const extraLunch = Math.max(0, lunch - MIN_LUNCH_MINUTES);
+      const effectiveLunch = Math.max(MIN_LUNCH_MINUTES, lunch);
+      const worked = Math.max(0, end - start - effectiveLunch);
+      let rawBalance = worked - WORK_DAY_MINUTES;
+      let countedBalance = rawBalance > 0 && rawBalance < POSITIVE_THRESHOLD ? 0 : rawBalance;
+      const date = parseDateKey(r.date);
+      if (!isCountedDay(date)) countedBalance = 0;
+      return { lunch, extraLunch, worked, rawBalance, countedBalance, counted: isCountedDay(date) };
+    }
+
+    function populateSelectors() {
+      el('monthSelect').innerHTML = monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+      const now = new Date();
+      const years = new Set([now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1]);
+      records.forEach(r => years.add(parseDateKey(r.date).getFullYear()));
+      el('yearSelect').innerHTML = [...years].sort((a,b)=>a-b).map(y=>`<option value="${y}">${y}</option>`).join('');
+      el('monthSelect').value = now.getMonth();
+      el('yearSelect').value = now.getFullYear();
+      el('date').value = dateKey(now);
+    }
+
+    function monthRecords() {
+      const m = Number(el('monthSelect').value), y = Number(el('yearSelect').value);
+      return records.filter(r => {
+        const d = parseDateKey(r.date);
+        return d.getMonth() === m && d.getFullYear() === y;
+      }).sort((a,b)=>a.date.localeCompare(b.date));
+    }
+
+    function render() {
+      const rows = monthRecords();
+      let balance = 0, extraDone = 0, owed = 0, daysWorked = 0;
+      const body = el('recordsBody');
+      body.innerHTML = '';
+
+      rows.forEach((r, idx) => {
+        const calc = calculateRecord(r);
+        balance += calc.countedBalance;
+        if (calc.counted && calc.countedBalance > 0) extraDone += calc.countedBalance;
+        if (calc.counted && calc.countedBalance < 0) owed += Math.abs(calc.countedBalance);
+        if (calc.counted) daysWorked++;
+
+        let status = '<span class="pill neutral">Não contado</span>';
+        if (calc.counted && calc.countedBalance > 0) status = '<span class="pill good">Positivo</span>';
+        if (calc.counted && calc.countedBalance < 0) status = '<span class="pill bad">Negativo</span>';
+        if (calc.counted && calc.countedBalance === 0 && calc.rawBalance > 0 && calc.rawBalance < POSITIVE_THRESHOLD) status = '<span class="pill neutral">Extra &lt; 15m</span>';
+        if (calc.counted && calc.countedBalance === 0 && calc.rawBalance === 0) status = '<span class="pill neutral">Certo</span>';
+
+        const date = parseDateKey(r.date);
+        const hName = holidayMap(date.getFullYear()).get(r.date);
+        const dateLabel = `${r.date}${hName ? ' · ' + hName : isWeekend(date) ? ' · fim de semana' : ''}`;
+        body.innerHTML += `<tr>
+          <td>${dateLabel}</td><td>${r.start}</td><td>${r.lunchOut}</td><td>${r.lunchIn}</td><td>${r.end}</td>
+          <td>${formatMinutes(calc.worked)}</td><td class="${calc.countedBalance >= 0 ? 'good' : 'bad'}">${formatMinutes(calc.countedBalance)}</td><td>${status}</td>
+          <td><button class="danger small" onclick="deleteRecord('${r.date}')">Apagar</button></td>
+        </tr>`;
+      });
+
+      el('balance').textContent = formatMinutes(balance);
+      el('balance').className = balance >= 0 ? 'good' : 'bad';
+      el('extraDone').textContent = formatMinutes(extraDone);
+      el('owed').textContent = formatMinutes(owed);
+      el('daysWorked').textContent = daysWorked;
+      el('monthInfo').textContent = 'Regra aplicada: almoço mínimo de 1h; almoço acima de 1h é descontado; saldo positivo só entra a partir de 15m extra.';
+      renderChart(rows);
+      renderHolidays();
+    }
+
+    function renderChart(rows) {
+      const canvas = el('chart');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const padding = 50;
+      const w = canvas.width, h = canvas.height;
+      const points = rows.map(r => ({ date: r.date.slice(8,10), value: calculateRecord(r).countedBalance }));
+      ctx.font = '24px system-ui';
+      ctx.fillStyle = 'rgba(238,242,255,.9)';
+      if (!points.length) { ctx.fillText('Sem registos neste mês', padding, h/2); return; }
+      const values = points.map(p=>p.value);
+      const max = Math.max(60, ...values);
+      const min = Math.min(-60, ...values);
+      const range = max - min || 1;
+      const xStep = points.length === 1 ? 0 : (w - padding*2) / (points.length - 1);
+      const y = val => h - padding - ((val - min) / range) * (h - padding*2);
+      const x = i => padding + i*xStep;
+
+      ctx.strokeStyle = 'rgba(255,255,255,.18)';
+      ctx.lineWidth = 1;
+      for (let i=0;i<=4;i++) {
+        const yy = padding + i*(h-padding*2)/4;
+        ctx.beginPath(); ctx.moveTo(padding, yy); ctx.lineTo(w-padding, yy); ctx.stroke();
+      }
+      const zeroY = y(0);
+      ctx.strokeStyle = 'rgba(255,255,255,.45)';
+      ctx.beginPath(); ctx.moveTo(padding, zeroY); ctx.lineTo(w-padding, zeroY); ctx.stroke();
+
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      points.forEach((p,i)=> i ? ctx.lineTo(x(i), y(p.value)) : ctx.moveTo(x(i), y(p.value)) );
+      ctx.stroke();
+
+      points.forEach((p,i)=>{
+        ctx.beginPath(); ctx.arc(x(i), y(p.value), 6, 0, Math.PI*2); ctx.fillStyle = p.value >= 0 ? '#22c55e' : '#ef4444'; ctx.fill();
+        ctx.fillStyle = 'rgba(238,242,255,.82)'; ctx.font = '16px system-ui'; ctx.fillText(p.date, x(i)-8, h-18);
+        ctx.fillText(formatMinutes(p.value), x(i)-20, y(p.value)-12);
+      });
+    }
+
+    function renderHolidays() {
+      const year = Number(el('yearSelect').value) || new Date().getFullYear();
+      const all = [...holidayMap(year).entries()].sort((a,b)=>a[0].localeCompare(b[0]));
+      el('holidayList').innerHTML = all.map(([date,name]) => {
+        const isCustom = customHolidays.some(h => h.date === date);
+        return `<div class="holiday-item"><span><strong>${date}</strong> · ${name}</span>${isCustom ? `<button class="danger small" onclick="removeHoliday('${date}')">Remover</button>` : ''}</div>`;
+      }).join('');
+    }
+
+    window.deleteRecord = function(date) {
+      const i = records.findIndex(r => r.date === date);
+      if (i >= 0 && confirm('Apagar este registo?')) { records.splice(i,1); saveRecords(); render(); }
+    }
+    window.removeHoliday = function(date) {
+      customHolidays = customHolidays.filter(h => h.date !== date);
+      saveHolidays(); render();
+    }
+
+    el('entryForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const r = { date: el('date').value, start: el('start').value, lunchOut: el('lunchOut').value, lunchIn: el('lunchIn').value, end: el('end').value };
+      const times = [r.start, r.lunchOut, r.lunchIn, r.end].map(minutesFromTime);
+      const msg = el('formMessage');
+      if (!(times[0] < times[1] && times[1] <= times[2] && times[2] < times[3])) {
+        msg.textContent = 'Verifica as horas: devem estar por ordem cronológica.'; msg.classList.remove('hidden'); return;
+      }
+      const d = parseDateKey(r.date);
+      if (!isCountedDay(d) && !confirm('Este dia é fim de semana ou feriado. Guardar mesmo assim? Não contará para o saldo.')) return;
+      const existing = records.findIndex(x => x.date === r.date);
+      if (existing >= 0) records[existing] = r; else records.push(r);
+      saveRecords();
+      msg.textContent = 'Registo guardado.'; msg.classList.remove('hidden');
+      render();
+    });
+
+    el('monthSelect').addEventListener('change', render);
+    el('yearSelect').addEventListener('change', render);
+    el('todayBtn').addEventListener('click', () => { const n = new Date(); el('monthSelect').value = n.getMonth(); el('yearSelect').value = n.getFullYear(); render(); });
+    el('addHolidayBtn').addEventListener('click', () => {
+      const date = el('holidayDate').value, name = el('holidayName').value.trim() || 'Feriado personalizado';
+      if (!date) return alert('Escolhe uma data.');
+      customHolidays = customHolidays.filter(h => h.date !== date);
+      customHolidays.push({ date, name }); saveHolidays(); render();
+    });
+    el('clearMonthBtn').addEventListener('click', () => {
+      const rows = monthRecords();
+      if (!rows.length) return;
+      if (!confirm('Apagar todos os registos deste mês?')) return;
+      rows.forEach(r => { const i = records.findIndex(x => x.date === r.date); if (i >= 0) records.splice(i,1); });
+      saveRecords(); render();
+    });
+    el('exportBtn').addEventListener('click', () => {
+      const rows = monthRecords();
+      const csvRows = [['Data','Entrada','Saida almoco','Entrada apos almoco','Saida','Trabalhado','Saldo contado','Saldo real']];
+      rows.forEach(r => { const c = calculateRecord(r); csvRows.push([r.date,r.start,r.lunchOut,r.lunchIn,r.end,formatMinutes(c.worked),formatMinutes(c.countedBalance),formatMinutes(c.rawBalance)]); });
+      const csv = csvRows.map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(';')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `saldo_horario_${el('yearSelect').value}_${pad(Number(el('monthSelect').value)+1)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    function showBackupMessage(msg) {
+      const box = el('backupMessage');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 4500);
+    }
+
+    el('backupBtn').addEventListener('click', () => {
+      const payload = {
+        app: 'Calculadora de Saldo Horario',
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        records,
+        customHolidays
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json;charset=utf-8'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `backup_saldo_horario_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showBackupMessage('Backup exportado. Envia esse ficheiro para o telemóvel e importa-o nesta app.');
+    });
+
+    el('importBtn').addEventListener('click', () => el('importFile').click());
+
+    el('importFile').addEventListener('change', async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data || !Array.isArray(data.records)) throw new Error('Formato inválido');
+        const importedRecords = data.records.filter(r => r.date && r.start && r.lunchOut && r.lunchIn && r.end);
+        const importedHolidays = Array.isArray(data.customHolidays) ? data.customHolidays.filter(h => h.date && h.name) : [];
+        if (!confirm(`Importar ${importedRecords.length} registos? Os registos com a mesma data serão substituídos.`)) return;
+        importedRecords.forEach(r => {
+          const i = records.findIndex(x => x.date === r.date);
+          if (i >= 0) records[i] = r; else records.push(r);
+        });
+        importedHolidays.forEach(h => {
+          const i = customHolidays.findIndex(x => x.date === h.date);
+          if (i >= 0) customHolidays[i] = h; else customHolidays.push(h);
+        });
+        saveRecords();
+        saveHolidays();
+        render();
+        showBackupMessage('Backup importado com sucesso.');
+      } catch (err) {
+        alert('Não consegui importar o ficheiro. Confirma se é o backup JSON exportado pela app.');
+      } finally {
+        event.target.value = '';
+      }
+    });
+
+
+    populateSelectors();
+    render();
+  </script>
+</body>
+</html>
