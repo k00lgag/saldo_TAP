@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>Saldo TAP</title>
+  <title>Saldo TAP v6</title>
   <style>
     :root{
       --bg:#f3f4f6;
@@ -525,10 +525,91 @@
 
 <script>
 (() => {
-  const STORAGE_KEY = "saldoHorarioTap.v4.mobile";
-  const HOLIDAY_KEY = "saldoHorarioTap.holidays.v4";
-  let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  let customHolidays = JSON.parse(localStorage.getItem(HOLIDAY_KEY) || "[]");
+  const STORAGE_KEY = "saldoHorarioTap.v6.mobile";
+  const HOLIDAY_KEY = "saldoHorarioTap.holidays.v6";
+  const OLD_STORAGE_KEYS = [
+    "saldoHorarioTap.v5.mobile",
+    "saldoHorarioTap.v4.mobile",
+    "saldoHorario.records.v1"
+  ];
+  const OLD_HOLIDAY_KEYS = [
+    "saldoHorarioTap.holidays.v5",
+    "saldoHorarioTap.holidays.v4",
+    "saldoHorario.customHolidays.v1"
+  ];
+
+  function normalizeRecord(r){
+    if(!r || !r.date) return null;
+
+    // Formato novo: in1, outLunch, inLunch, out1
+    // Formato antigo: start, lunchOut, lunchIn, end
+    const normalized = {
+      id: r.id || crypto.randomUUID(),
+      date: r.date,
+      in1: r.in1 || r.start || "",
+      outLunch: r.outLunch || r.lunchOut || "",
+      inLunch: r.inLunch || r.lunchIn || "",
+      out1: r.out1 || r.end || "",
+      note: r.note || r.obs || ""
+    };
+
+    if(!normalized.date || !normalized.in1 || !normalized.outLunch || !normalized.inLunch || !normalized.out1) {
+      return null;
+    }
+
+    return normalized;
+  }
+
+  function normalizeHoliday(h){
+    if(!h || !h.date) return null;
+    return {
+      date: h.date,
+      name: h.name || h.title || "Feriado"
+    };
+  }
+
+  function uniqueByDate(list){
+    const map = new Map();
+    for(const item of list){
+      if(item && item.date) map.set(item.date, item);
+    }
+    return [...map.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  }
+
+  function loadRecords(){
+    const current = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]").map(normalizeRecord).filter(Boolean);
+    if(current.length) return current;
+
+    for(const key of OLD_STORAGE_KEYS){
+      try{
+        const old = JSON.parse(localStorage.getItem(key) || "[]").map(normalizeRecord).filter(Boolean);
+        if(old.length){
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(uniqueByDate(old)));
+          return uniqueByDate(old);
+        }
+      }catch(e){}
+    }
+    return [];
+  }
+
+  function loadHolidays(){
+    const current = JSON.parse(localStorage.getItem(HOLIDAY_KEY) || "[]").map(normalizeHoliday).filter(Boolean);
+    if(current.length) return current;
+
+    for(const key of OLD_HOLIDAY_KEYS){
+      try{
+        const old = JSON.parse(localStorage.getItem(key) || "[]").map(normalizeHoliday).filter(Boolean);
+        if(old.length){
+          localStorage.setItem(HOLIDAY_KEY, JSON.stringify(uniqueByDate(old)));
+          return uniqueByDate(old);
+        }
+      }catch(e){}
+    }
+    return [];
+  }
+
+  let records = loadRecords();
+  let customHolidays = loadHolidays();
   let editingId = null;
 
   const $ = id => document.getElementById(id);
@@ -622,20 +703,39 @@
     if([a,b,c,d].some(x=>x===null)) return {valid:false,msg:"Preenche todos os horários."};
     if(!(a < b && b <= c && c < d)) return {valid:false,msg:"Confirma a ordem das horas."};
 
-    const morning = b-a;
-    const afternoon = d-c;
     const realLunch = c-b;
-    const lunchPenalty = Math.max(0, realLunch-60);
-    const workedCredit = morning + afternoon - lunchPenalty;
-    const rawBalance = workedCredit - targetMinutes();
 
-    let countedBalance = rawBalance;
-    if(rawBalance > 0 && rawBalance < 15) countedBalance = 0;
+    // Regra correta:
+    // 1) O dia esperado é 7h30 de trabalho + 1h de almoço = 8h30 entre entrada e saída.
+    // 2) A diferença positiva entre entrada e saída só conta se for >= 15 min.
+    // 3) O almoço nunca dá saldo positivo. Se for menor que 1h, conta como 1h.
+    // 4) Se o almoço for maior que 1h, desconta apenas o excesso.
+    // Ex.: 08:00-16:51 = +21 min face a 8h30; almoço 1h06 = -6 min; saldo final = +15 min.
+    const expectedSpan = targetMinutes() + 60;
+    const actualSpan = d-a;
+    const entryExitBalanceRaw = actualSpan - expectedSpan;
+
+    let entryExitBalanceCounted = entryExitBalanceRaw;
+    if(entryExitBalanceRaw > 0 && entryExitBalanceRaw < 15) {
+      entryExitBalanceCounted = 0;
+    }
+
+    const lunchPenalty = Math.max(0, realLunch-60);
+    const lunchBalance = -lunchPenalty;
+
+    const countedBalance = entryExitBalanceCounted + lunchBalance;
+
+    // Informação auxiliar para compatibilidade visual/exportação
+    const workedCredit = actualSpan - Math.max(realLunch, 60);
+    const rawBalance = workedCredit - targetMinutes();
 
     return {
       valid:true,
       realLunch,
       lunchPenalty,
+      lunchBalance,
+      entryExitBalanceRaw,
+      entryExitBalanceCounted,
       workedCredit,
       rawBalance,
       countedBalance,
@@ -876,8 +976,19 @@
     URL.revokeObjectURL(a.href);
   }
 
-  $("exportJson").onclick = () => download(`saldo-horario-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify({records, customHolidays}, null, 2));
+  $("exportJson").onclick = () => {
+    const payload = {
+      app: "Calculadora de Saldo Horario",
+      version: 6,
+      exportedAt: new Date().toISOString(),
+      records,
+      customHolidays
+    };
+    download(`saldo-horario-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload, null, 2));
+  };
+
   $("importJsonBtn").onclick = () => $("importJson").click();
+
   $("importJson").onchange = e => {
     const file=e.target.files[0];
     if(!file) return;
@@ -885,11 +996,37 @@
     reader.onload=()=>{
       try{
         const data=JSON.parse(reader.result);
-        if(!Array.isArray(data.records)) throw new Error("Formato inválido");
-        records=data.records;
-        customHolidays=Array.isArray(data.customHolidays)?data.customHolidays:[];
-        save(); render(); alert("Backup importado.");
-      }catch(err){ alert("Não foi possível importar o ficheiro."); }
+
+        // Aceita backups antigos e novos:
+        // antigo: { records: [{date,start,lunchOut,lunchIn,end}], customHolidays: [...] }
+        // novo:   { records: [{date,in1,outLunch,inLunch,out1}], customHolidays: [...] }
+        // também aceita um array simples de registos.
+        const sourceRecords = Array.isArray(data) ? data : data.records;
+        if(!Array.isArray(sourceRecords)) throw new Error("Formato inválido");
+
+        const importedRecords = sourceRecords.map(normalizeRecord).filter(Boolean);
+        const importedHolidays = Array.isArray(data.customHolidays)
+          ? data.customHolidays.map(normalizeHoliday).filter(Boolean)
+          : [];
+
+        if(importedRecords.length === 0){
+          alert("O ficheiro foi lido, mas não encontrei registos válidos para importar.");
+          return;
+        }
+
+        if(!confirm(`Importar ${importedRecords.length} registos? Registos com a mesma data serão substituídos.`)) return;
+
+        records = uniqueByDate([...records, ...importedRecords]);
+        customHolidays = uniqueByDate([...customHolidays, ...importedHolidays]);
+
+        save();
+        render();
+        alert("Backup importado com sucesso.");
+      }catch(err){
+        alert("Não foi possível importar o ficheiro. Confirma se é um backup JSON exportado pela app.");
+      }finally{
+        e.target.value = "";
+      }
     };
     reader.readAsText(file);
   };
