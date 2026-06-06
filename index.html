@@ -1,646 +1,944 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-PT">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f172a" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Calculadora de Saldo Horário</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Saldo TAP</title>
   <style>
-    :root {
-      --bg: #0f172a;
-      --card: #111c33;
-      --card2: #16233d;
-      --text: #eef2ff;
-      --muted: #a8b3cf;
-      --line: rgba(255,255,255,.12);
-      --accent: #60a5fa;
-      --good: #22c55e;
-      --bad: #ef4444;
-      --warn: #f59e0b;
-      --shadow: 0 18px 55px rgba(0,0,0,.35);
-      --radius: 18px;
+    :root{
+      --bg:#f3f4f6;
+      --card:#ffffff;
+      --ink:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --brand:#111827;
+      --brand2:#2563eb;
+      --good:#059669;
+      --bad:#dc2626;
+      --warn:#d97706;
+      --shadow:0 8px 25px rgba(17,24,39,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html{-webkit-text-size-adjust:100%}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+      font-size:16px;
+    }
+    .app{
+      width:min(1180px,100%);
+      margin:0 auto;
+      padding:16px;
+      padding-bottom:90px;
+    }
+    header{
+      position:sticky;
+      top:0;
+      z-index:20;
+      margin:-16px -16px 16px;
+      padding:calc(14px + env(safe-area-inset-top)) 16px 14px;
+      background:rgba(17,24,39,.96);
+      color:white;
+      box-shadow:0 2px 14px rgba(0,0,0,.16);
+    }
+    header .top{
+      width:min(1180px,100%);
+      margin:0 auto;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+    }
+    h1{font-size:22px;margin:0;line-height:1.1}
+    .subtitle{font-size:13px;color:#cbd5e1;margin-top:4px}
+    .pill{
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:999px;
+      padding:8px 10px;
+      font-size:13px;
+      white-space:nowrap;
+      background:rgba(255,255,255,.08);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:1.05fr .95fr;
+      gap:16px;
+      align-items:start;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:16px;
+      margin-bottom:16px;
+    }
+    h2{
+      font-size:18px;
+      margin:0 0 14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    label{
+      font-size:13px;
+      font-weight:650;
+      color:#374151;
+      margin-bottom:7px;
+      display:block;
+    }
+    input,select,button{
+      font:inherit;
+    }
+    input,select{
+      width:100%;
+      min-height:48px;
+      border:1px solid #d1d5db;
+      border-radius:14px;
+      background:#fff;
+      padding:11px 12px;
+      color:var(--ink);
+      font-size:16px;
+      outline:none;
+    }
+    input:focus,select:focus{
+      border-color:var(--brand2);
+      box-shadow:0 0 0 4px rgba(37,99,235,.12);
+    }
+    .form-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    .full{grid-column:1/-1}
+    .actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:14px;
+    }
+    button{
+      min-height:48px;
+      border:0;
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:750;
+      cursor:pointer;
+      touch-action:manipulation;
+    }
+    .primary{background:var(--brand2);color:white}
+    .dark{background:var(--brand);color:white}
+    .ghost{background:#eef2ff;color:#1e3a8a}
+    .danger{background:#fee2e2;color:#991b1b}
+    .light{background:#f3f4f6;color:#111827;border:1px solid var(--line)}
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+    }
+    .stat{
+      border:1px solid var(--line);
+      background:#fafafa;
+      border-radius:16px;
+      padding:14px;
+      min-height:94px;
+    }
+    .stat small{
+      display:block;
+      color:var(--muted);
+      font-weight:650;
+      font-size:12px;
+      margin-bottom:8px;
+    }
+    .stat strong{
+      font-size:22px;
+      display:block;
+      line-height:1.1;
+    }
+    .good{color:var(--good)}
+    .bad{color:var(--bad)}
+    .warn{color:var(--warn)}
+    .muted{color:var(--muted)}
+    .note{
+      background:#fffbeb;
+      border:1px solid #fde68a;
+      color:#92400e;
+      padding:12px;
+      border-radius:14px;
+      font-size:13px;
+      line-height:1.35;
+    }
+    .chart-wrap{
+      width:100%;
+      overflow:hidden;
+    }
+    canvas{
+      width:100%;
+      height:260px;
+      display:block;
+      border-radius:14px;
+      background:#fff;
+      border:1px solid var(--line);
+    }
+    .toolbar{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .toolbar button{
+      min-height:40px;
+      border-radius:12px;
+      padding:9px 11px;
+      font-size:14px;
+    }
+    .records{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .record{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+      background:#fff;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:10px;
+      align-items:start;
+    }
+    .record-title{
+      font-weight:800;
+      margin-bottom:8px;
+    }
+    .record-meta{
+      display:grid;
+      grid-template-columns:repeat(4,auto);
+      gap:7px 12px;
+      font-size:13px;
+      color:#4b5563;
+    }
+    .record-meta span{
+      white-space:nowrap;
+    }
+    .balance-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:78px;
+      border-radius:999px;
+      padding:7px 9px;
+      font-weight:850;
+      font-size:13px;
+      background:#f3f4f6;
+    }
+    .record-actions{
+      display:flex;
+      gap:7px;
+    }
+    .record-actions button{
+      min-height:38px;
+      padding:8px 10px;
+      border-radius:11px;
+      font-size:13px;
+    }
+    .bottom-nav{
+      display:none;
+    }
+    .hide-mobile{display:block}
+    .show-mobile{display:none}
+    .section-anchor{scroll-margin-top:86px}
+    .empty{
+      padding:22px;
+      border:1px dashed #cbd5e1;
+      border-radius:16px;
+      color:var(--muted);
+      text-align:center;
+      background:#fafafa;
     }
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(96,165,250,.24), transparent 34%),
-        radial-gradient(circle at top right, rgba(34,197,94,.12), transparent 28%),
-        var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-
-    header {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: max(20px, env(safe-area-inset-top)) 18px 14px;
-    }
-
-    h1 { margin: 0; font-size: clamp(1.75rem, 7vw, 3.2rem); letter-spacing: -0.04em; line-height: 1.05; }
-    .subtitle { color: var(--muted); margin-top: 10px; line-height: 1.5; max-width: 780px; }
-
-    main {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 14px 18px 40px;
-      display: grid;
-      gap: 18px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.1fr);
-      gap: 18px;
-      align-items: start;
-    }
-
-    .card {
-      background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)), var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 18px;
-    }
-
-    .card h2 { margin: 0 0 14px; font-size: 1.1rem; }
-
-    form { display: grid; gap: 12px; }
-    label { display: grid; gap: 7px; color: var(--muted); font-size: .92rem; }
-    input, select, button, textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 13px 13px;
-      background: rgba(255,255,255,.07);
-      color: var(--text);
-      font: inherit;
-      font-size: 16px;
-      outline: none;
-      min-height: 46px;
-    }
-    input:focus, select:focus, textarea:focus { border-color: rgba(96,165,250,.8); box-shadow: 0 0 0 3px rgba(96,165,250,.15); }
-    input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: .8; }
-
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-
-    button {
-      cursor: pointer;
-      border: 0;
-      background: linear-gradient(135deg, #3b82f6, #60a5fa);
-      color: white;
-      font-weight: 750;
-      transition: transform .15s ease, opacity .15s ease;
-      touch-action: manipulation;
-    }
-    button:hover { transform: translateY(-1px); }
-    button:active { transform: translateY(0); opacity: .9; }
-    button.secondary { background: rgba(255,255,255,.09); border: 1px solid var(--line); color: var(--text); }
-    button.danger { background: rgba(239,68,68,.18); border: 1px solid rgba(239,68,68,.38); color: #fecaca; }
-    button.small { padding: 9px 11px; border-radius: 10px; font-size: .9rem; min-height: 42px; }
-
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-    }
-    .metric {
-      background: rgba(255,255,255,.06);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 14px;
-      min-height: 92px;
-    }
-    .metric span { color: var(--muted); font-size: .85rem; }
-    .metric strong { display: block; margin-top: 8px; font-size: clamp(1.25rem, 6vw, 1.55rem); letter-spacing: -.02em; }
-    .good { color: var(--good); }
-    .bad { color: var(--bad); }
-    .warn { color: var(--warn); }
-
-    .notice {
-      background: rgba(96,165,250,.1);
-      border: 1px solid rgba(96,165,250,.25);
-      border-radius: 14px;
-      padding: 12px;
-      color: #dbeafe;
-      line-height: 1.45;
-      font-size: .92rem;
-    }
-
-    .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--line); }
-    table { width: 100%; border-collapse: collapse; min-width: 760px; }
-    th, td { padding: 11px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
-    th { color: var(--muted); font-size: .82rem; font-weight: 650; background: rgba(255,255,255,.045); }
-    td { font-size: .92rem; }
-    tr:last-child td { border-bottom: 0; }
-
-    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; font-weight: 700; font-size: .78rem; }
-    .pill.good { background: rgba(34,197,94,.14); }
-    .pill.bad { background: rgba(239,68,68,.14); }
-    .pill.neutral { color: var(--muted); background: rgba(255,255,255,.08); }
-
-    canvas { width: 100%; height: 330px; background: rgba(255,255,255,.035); border: 1px solid var(--line); border-radius: 16px; display: block; }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .muted { color: var(--muted); }
-    .hidden { display: none !important; }
-
-    .holiday-list { display: grid; gap: 8px; margin-top: 10px; }
-    .holiday-item { display: flex; justify-content: space-between; gap: 10px; align-items: center; background: rgba(255,255,255,.055); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; }
-
-    @media (max-width: 900px) {
-      .grid { grid-template-columns: 1fr; }
-      .summary { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (max-width: 640px) {
-      body { background-attachment: fixed; }
-      header { padding: max(18px, env(safe-area-inset-top)) 14px 6px; }
-      .subtitle { font-size: .92rem; }
-      main { padding: 10px 10px 28px; gap: 12px; }
-      .card { padding: 14px; border-radius: 15px; box-shadow: 0 10px 28px rgba(0,0,0,.28); }
-      .row, .three { grid-template-columns: 1fr; gap: 10px; }
-      .summary { grid-template-columns: 1fr 1fr; gap: 10px; }
-      .metric { min-height: 84px; padding: 12px; }
-      .actions { display: grid; grid-template-columns: 1fr; }
-      .actions button { width: 100%; }
-      canvas { height: 260px; }
-
-      .table-wrap { overflow: visible; border: 0; border-radius: 0; }
-      table { min-width: 0; border-collapse: separate; border-spacing: 0 10px; }
-      thead { display: none; }
-      tbody, tr, td { display: block; width: 100%; }
-      tr {
-        background: rgba(255,255,255,.055);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 10px;
+    @media (max-width: 760px){
+      body{background:#f8fafc}
+      .app{
+        padding:12px;
+        padding-bottom:96px;
       }
-      td {
-        display: flex;
-        justify-content: space-between;
-        gap: 14px;
-        align-items: center;
-        border-bottom: 1px solid rgba(255,255,255,.08);
-        padding: 9px 2px;
-        white-space: normal;
+      header{
+        margin:-12px -12px 12px;
+        padding:calc(12px + env(safe-area-inset-top)) 12px 12px;
       }
-      td:last-child { border-bottom: 0; padding-bottom: 0; }
-      td::before {
-        content: attr(data-label);
-        color: var(--muted);
-        font-weight: 650;
-        flex: 0 0 42%;
+      header .top{
+        align-items:flex-start;
       }
-      td[data-label="Ações"]::before { content: ""; display: none; }
-      td[data-label="Ações"] { justify-content: stretch; }
-      td[data-label="Ações"] button { width: 100%; }
-      .holiday-item { align-items: stretch; flex-direction: column; }
+      h1{font-size:20px}
+      .subtitle{font-size:12px}
+      .pill{display:none}
+      .grid{display:block}
+      .card{
+        border-radius:18px;
+        padding:14px;
+        margin-bottom:12px;
+        box-shadow:0 5px 18px rgba(17,24,39,.06);
+      }
+      h2{font-size:17px;margin-bottom:12px}
+      .form-grid{
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+      }
+      label{font-size:12px}
+      input,select{
+        min-height:52px;
+        border-radius:15px;
+        font-size:16px;
+        padding:12px;
+      }
+      .actions{
+        position:sticky;
+        bottom:76px;
+        z-index:15;
+        grid-template-columns:1fr;
+        background:rgba(248,250,252,.9);
+        backdrop-filter:blur(10px);
+        padding:10px 0 0;
+        margin-top:10px;
+      }
+      .actions .light{display:none}
+      button{min-height:52px;border-radius:15px}
+      .stats{
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+      .stat{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        min-height:68px;
+        padding:13px;
+      }
+      .stat small{margin:0;font-size:12px;max-width:48%}
+      .stat strong{text-align:right;font-size:21px}
+      canvas{height:230px}
+      .toolbar{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+      }
+      .toolbar button{font-size:13px}
+      .record{
+        grid-template-columns:1fr;
+        padding:12px;
+      }
+      .record-meta{
+        grid-template-columns:1fr 1fr;
+        gap:7px 8px;
+      }
+      .record-meta span{
+        white-space:normal;
+        background:#f9fafb;
+        border:1px solid #eef2f7;
+        border-radius:10px;
+        padding:7px;
+      }
+      .record-actions{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+      }
+      .record-actions button{
+        min-height:42px;
+      }
+      .balance-badge{
+        width:100%;
+        justify-content:center;
+      }
+      .hide-mobile{display:none!important}
+      .show-mobile{display:block}
+      .bottom-nav{
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        position:fixed;
+        left:0;
+        right:0;
+        bottom:0;
+        z-index:30;
+        padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+        background:rgba(255,255,255,.96);
+        border-top:1px solid var(--line);
+        backdrop-filter:blur(12px);
+      }
+      .bottom-nav a{
+        text-decoration:none;
+        color:#374151;
+        text-align:center;
+        font-size:11px;
+        font-weight:750;
+        padding:8px 4px;
+        border-radius:12px;
+      }
+      .bottom-nav a:active,.bottom-nav a:hover{
+        background:#eef2ff;
+        color:#1d4ed8;
+      }
     }
-
-    @media (max-width: 380px) {
-      .summary { grid-template-columns: 1fr; }
-      h1 { font-size: 1.65rem; }
+    @media (max-width: 390px){
+      .form-grid{grid-template-columns:1fr}
+      .record-meta{grid-template-columns:1fr}
+      h1{font-size:19px}
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Saldo Horário</h1>
-    <p class="subtitle">Regista entradas, almoço e saídas. A app desconta 7h30 por dia útil, considera sempre 1h de almoço no mínimo, desconta almoço acima de 1h e só conta saldo positivo a partir dos 15 minutos extra.</p>
+    <div class="top">
+      <div>
+        <h1>Saldo Horário</h1>
+        <div class="subtitle">Registo diário · 7h30/dia · almoço mínimo 1h</div>
+      </div>
+      <div class="pill" id="todayPill"></div>
+    </div>
   </header>
 
-  <main>
-    <section class="grid">
-      <div class="card">
-        <h2>Adicionar dia</h2>
-        <form id="entryForm">
-          <label>Data
-            <input id="date" type="date" required>
-          </label>
-          <div class="row">
-            <label>Entrada
-              <input id="start" type="time" required>
-            </label>
-            <label>Saída para almoço
-              <input id="lunchOut" type="time" required>
-            </label>
+  <main class="app">
+    <div class="grid">
+      <section>
+        <div class="card section-anchor" id="registar">
+          <h2>Registar dia <span class="muted" id="editHint"></span></h2>
+          <div class="form-grid">
+            <div class="full">
+              <label for="date">Data</label>
+              <input type="date" id="date">
+            </div>
+            <div>
+              <label for="in1">Entrada</label>
+              <input type="time" id="in1" inputmode="numeric">
+            </div>
+            <div>
+              <label for="outLunch">Saída almoço</label>
+              <input type="time" id="outLunch" inputmode="numeric">
+            </div>
+            <div>
+              <label for="inLunch">Entrada almoço</label>
+              <input type="time" id="inLunch" inputmode="numeric">
+            </div>
+            <div>
+              <label for="out1">Saída</label>
+              <input type="time" id="out1" inputmode="numeric">
+            </div>
+            <div class="full">
+              <label for="note">Nota opcional</label>
+              <input type="text" id="note" placeholder="Ex.: formação, médico, etc.">
+            </div>
           </div>
-          <div class="row">
-            <label>Entrada após almoço
-              <input id="lunchIn" type="time" required>
-            </label>
-            <label>Saída do trabalho
-              <input id="end" type="time" required>
-            </label>
+          <div class="note" id="dayWarning" style="display:none;margin-top:12px"></div>
+          <div class="actions">
+            <button class="primary" id="saveBtn">Guardar registo</button>
+            <button class="light" id="clearBtn">Limpar campos</button>
           </div>
-          <button type="submit">Guardar registo</button>
-        </form>
-        <p id="formMessage" class="notice hidden" style="margin-top:12px"></p>
-      </div>
-
-      <div class="card">
-        <h2>Resumo do mês</h2>
-        <div class="three">
-          <label>Mês
-            <select id="monthSelect"></select>
-          </label>
-          <label>Ano
-            <select id="yearSelect"></select>
-          </label>
-          <label>&nbsp;
-            <button id="todayBtn" type="button" class="secondary">Mês atual</button>
-          </label>
         </div>
-        <div class="summary" style="margin-top:14px">
-          <div class="metric"><span>Saldo horário</span><strong id="balance">0m</strong></div>
-          <div class="metric"><span>Tempo extra feito</span><strong id="extraDone" class="good">0m</strong></div>
-          <div class="metric"><span>Tempo que deve</span><strong id="owed" class="bad">0m</strong></div>
-          <div class="metric"><span>Dias úteis registados</span><strong id="daysWorked">0</strong></div>
+
+        <div class="card section-anchor" id="resumo">
+          <h2>Resumo mensal</h2>
+          <div class="form-grid" style="margin-bottom:12px">
+            <div>
+              <label for="month">Mês</label>
+              <input type="month" id="month">
+            </div>
+            <div>
+              <label for="target">Horas por dia</label>
+              <input type="text" id="target" value="07:30">
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <small>Saldo do mês</small>
+              <strong id="monthBalance">00:00</strong>
+            </div>
+            <div class="stat">
+              <small>Tempo extra feito</small>
+              <strong class="good" id="extraDone">00:00</strong>
+            </div>
+            <div class="stat">
+              <small>Tempo que deves</small>
+              <strong class="bad" id="owedTime">00:00</strong>
+            </div>
+          </div>
         </div>
-        <p id="monthInfo" class="muted"></p>
-      </div>
-    </section>
 
-    <section class="card">
-      <h2>Gráfico mensal</h2>
-      <canvas id="chart" width="1100" height="360"></canvas>
-    </section>
-
-
-    <section class="card">
-      <h2>Passar dados entre PC e telemóvel</h2>
-      <p class="muted">Os dados ficam guardados apenas no navegador onde são inseridos. Para usar noutro dispositivo, exporta um backup no PC e importa-o no telemóvel.</p>
-      <div class="actions">
-        <button id="backupBtn" class="secondary small" type="button">Exportar backup JSON</button>
-        <button id="importBtn" class="secondary small" type="button">Importar backup JSON</button>
-        <input id="importFile" type="file" accept="application/json,.json" style="display:none">
-      </div>
-      <p id="backupMessage" class="notice hidden" style="margin-top:12px"></p>
-    </section>
-
-    <section class="card">
-      <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap">
-        <h2 style="margin:0">Registos</h2>
-        <div class="actions">
-          <button id="exportBtn" class="secondary small" type="button">Exportar CSV</button>
-          <button id="clearMonthBtn" class="danger small" type="button">Apagar mês</button>
+        <div class="card section-anchor" id="grafico">
+          <h2>Gráfico do mês</h2>
+          <div class="chart-wrap">
+            <canvas id="chart" width="900" height="360"></canvas>
+          </div>
         </div>
-      </div>
-      <div class="table-wrap" style="margin-top:14px">
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th><th>Entrada</th><th>Almoço</th><th>Regresso</th><th>Saída</th><th>Trabalhado</th><th>Saldo</th><th>Estado</th><th></th>
-            </tr>
-          </thead>
-          <tbody id="recordsBody"></tbody>
-        </table>
-      </div>
-    </section>
+      </section>
 
-    <section class="card">
-      <h2>Feriados</h2>
-      <p class="muted">A app inclui automaticamente feriados nacionais fixos e móveis de Portugal. Podes adicionar feriados locais/tolerâncias de ponto.</p>
-      <div class="row">
-        <label>Adicionar data
-          <input id="holidayDate" type="date">
-        </label>
-        <label>Nome
-          <input id="holidayName" type="text" placeholder="Ex.: Feriado municipal">
-        </label>
-      </div>
-      <button id="addHolidayBtn" class="secondary" type="button" style="margin-top:10px">Adicionar feriado</button>
-      <div id="holidayList" class="holiday-list"></div>
-    </section>
+      <aside>
+        <div class="card section-anchor" id="dados">
+          <h2>Dados</h2>
+          <div class="toolbar">
+            <button class="ghost" id="exportJson">Exportar backup</button>
+            <button class="ghost" id="importJsonBtn">Importar backup</button>
+            <button class="light" id="exportCsv">Exportar CSV</button>
+            <button class="danger" id="deleteMonth">Apagar mês</button>
+          </div>
+          <input type="file" id="importJson" accept="application/json,.json" style="display:none">
+          <div class="note">
+            Os dados ficam guardados no navegador deste dispositivo. Para passar do PC para o telemóvel, exporta o backup no PC e importa no telemóvel.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Feriados personalizados</h2>
+          <div class="form-grid">
+            <div>
+              <label for="holidayDate">Data</label>
+              <input type="date" id="holidayDate">
+            </div>
+            <div>
+              <label for="holidayName">Nome</label>
+              <input type="text" id="holidayName" placeholder="Ex.: tolerância">
+            </div>
+          </div>
+          <div class="actions" style="position:static;background:transparent;padding:0">
+            <button class="dark" id="addHoliday">Adicionar feriado</button>
+            <button class="light" id="clearHolidays">Limpar feriados</button>
+          </div>
+        </div>
+
+        <div class="card section-anchor" id="registos">
+          <h2>Registos do mês</h2>
+          <div id="records" class="records"></div>
+        </div>
+      </aside>
+    </div>
   </main>
 
-  <script>
-    const WORK_DAY_MINUTES = 7 * 60 + 30;
-    const MIN_LUNCH_MINUTES = 60;
-    const POSITIVE_THRESHOLD = 15;
-    const STORAGE_KEY = 'saldoHorario.records.v1';
-    const HOLIDAY_KEY = 'saldoHorario.customHolidays.v1';
+  <nav class="bottom-nav" aria-label="Navegação">
+    <a href="#registar">Registar</a>
+    <a href="#resumo">Resumo</a>
+    <a href="#grafico">Gráfico</a>
+    <a href="#registos">Registos</a>
+  </nav>
 
-    const el = id => document.getElementById(id);
-    const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    let customHolidays = JSON.parse(localStorage.getItem(HOLIDAY_KEY) || '[]');
+<script>
+(() => {
+  const STORAGE_KEY = "saldoHorarioTap.v4.mobile";
+  const HOLIDAY_KEY = "saldoHorarioTap.holidays.v4";
+  let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  let customHolidays = JSON.parse(localStorage.getItem(HOLIDAY_KEY) || "[]");
+  let editingId = null;
 
-    const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const $ = id => document.getElementById(id);
 
-    function pad(n) { return String(n).padStart(2, '0'); }
-    function dateKey(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
-    function parseDateKey(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
-    function minutesFromTime(t) { const [h,m] = t.split(':').map(Number); return h * 60 + m; }
-    function formatMinutes(total) {
-      const sign = total < 0 ? '-' : '';
-      total = Math.abs(Math.round(total));
-      const h = Math.floor(total / 60);
-      const m = total % 60;
-      if (h === 0) return `${sign}${m}m`;
-      return `${sign}${h}h${pad(m)}`;
+  const els = {
+    date:$("date"), in1:$("in1"), outLunch:$("outLunch"), inLunch:$("inLunch"), out1:$("out1"), note:$("note"),
+    month:$("month"), target:$("target"), saveBtn:$("saveBtn"), clearBtn:$("clearBtn"),
+    monthBalance:$("monthBalance"), extraDone:$("extraDone"), owedTime:$("owedTime"),
+    records:$("records"), chart:$("chart"), dayWarning:$("dayWarning"), editHint:$("editHint"),
+    todayPill:$("todayPill")
+  };
+
+  const pad = n => String(n).padStart(2,"0");
+  const today = new Date();
+  const localDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  els.date.value = localDate(today);
+  els.month.value = `${today.getFullYear()}-${pad(today.getMonth()+1)}`;
+  els.todayPill.textContent = new Intl.DateTimeFormat("pt-PT",{weekday:"short",day:"2-digit",month:"short"}).format(today);
+
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    localStorage.setItem(HOLIDAY_KEY, JSON.stringify(customHolidays));
+  }
+
+  function minutesFromTime(t){
+    if(!t || !/^\d{2}:\d{2}$/.test(t)) return null;
+    const [h,m]=t.split(":").map(Number);
+    return h*60+m;
+  }
+
+  function formatMinutes(min, signed=false){
+    const sign = min < 0 ? "-" : signed && min > 0 ? "+" : "";
+    min = Math.abs(Math.round(min));
+    return `${sign}${pad(Math.floor(min/60))}:${pad(min%60)}`;
+  }
+
+  function targetMinutes(){
+    const v = els.target.value.trim();
+    if(/^\d{1,2}:\d{2}$/.test(v)){
+      const [h,m]=v.split(":").map(Number);
+      return h*60+m;
     }
-    function saveRecords() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
-    function saveHolidays() { localStorage.setItem(HOLIDAY_KEY, JSON.stringify(customHolidays)); }
+    return 450;
+  }
 
-    function easterDate(year) {
-      const a = year % 19;
-      const b = Math.floor(year / 100);
-      const c = year % 100;
-      const d = Math.floor(b / 4);
-      const e = b % 4;
-      const f = Math.floor((b + 8) / 25);
-      const g = Math.floor((b - f + 1) / 3);
-      const h = (19 * a + b - d - g + 15) % 30;
-      const i = Math.floor(c / 4);
-      const k = c % 4;
-      const l = (32 + 2 * e + 2 * i - h - k) % 7;
-      const m = Math.floor((a + 11 * h + 22 * l) / 451);
-      const month = Math.floor((h + l - 7 * m + 114) / 31);
-      const day = ((h + l - 7 * m + 114) % 31) + 1;
-      return new Date(year, month - 1, day);
+  function easterDate(year){
+    const a=year%19,b=Math.floor(year/100),c=year%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;
+    return new Date(year,month-1,day);
+  }
+
+  function addDays(date, days){
+    const d = new Date(date);
+    d.setDate(d.getDate()+days);
+    return d;
+  }
+
+  function nationalHolidays(year){
+    const easter=easterDate(year);
+    const fixed = [
+      [`${year}-01-01`, "Ano Novo"],
+      [`${year}-04-25`, "25 de Abril"],
+      [`${year}-05-01`, "Dia do Trabalhador"],
+      [`${year}-06-10`, "Dia de Portugal"],
+      [`${year}-08-15`, "Assunção de Nossa Senhora"],
+      [`${year}-10-05`, "Implantação da República"],
+      [`${year}-11-01`, "Todos os Santos"],
+      [`${year}-12-01`, "Restauração da Independência"],
+      [`${year}-12-08`, "Imaculada Conceição"],
+      [`${year}-12-25`, "Natal"],
+      [localDate(addDays(easter,-2)), "Sexta-feira Santa"],
+      [localDate(addDays(easter,60)), "Corpo de Deus"]
+    ];
+    return fixed;
+  }
+
+  function holidayName(dateStr){
+    const y = Number(dateStr.slice(0,4));
+    const all = [...nationalHolidays(y), ...customHolidays.map(h=>[h.date,h.name || "Feriado"])];
+    const found = all.find(([d])=>d===dateStr);
+    return found ? found[1] : "";
+  }
+
+  function isWeekend(dateStr){
+    const d = new Date(dateStr+"T12:00:00");
+    const day = d.getDay();
+    return day === 0 || day === 6;
+  }
+
+  function calculate(rec){
+    const a=minutesFromTime(rec.in1), b=minutesFromTime(rec.outLunch), c=minutesFromTime(rec.inLunch), d=minutesFromTime(rec.out1);
+    if([a,b,c,d].some(x=>x===null)) return {valid:false,msg:"Preenche todos os horários."};
+    if(!(a < b && b <= c && c < d)) return {valid:false,msg:"Confirma a ordem das horas."};
+
+    const morning = b-a;
+    const afternoon = d-c;
+    const realLunch = c-b;
+    const lunchPenalty = Math.max(0, realLunch-60);
+    const workedCredit = morning + afternoon - lunchPenalty;
+    const rawBalance = workedCredit - targetMinutes();
+
+    let countedBalance = rawBalance;
+    if(rawBalance > 0 && rawBalance < 15) countedBalance = 0;
+
+    return {
+      valid:true,
+      realLunch,
+      lunchPenalty,
+      workedCredit,
+      rawBalance,
+      countedBalance,
+      extra: Math.max(0,countedBalance),
+      owed: Math.max(0,-countedBalance)
+    };
+  }
+
+  function checkDayWarning(){
+    const date = els.date.value;
+    if(!date){ els.dayWarning.style.display="none"; return; }
+    let msg = "";
+    if(isWeekend(date)) msg = "Este dia é fim de semana e não deve contar para o saldo.";
+    const h = holidayName(date);
+    if(h) msg = `Este dia é feriado: ${h}. Não deve contar para o saldo.`;
+    if(msg){
+      els.dayWarning.textContent = msg;
+      els.dayWarning.style.display = "block";
+    } else {
+      els.dayWarning.style.display = "none";
     }
+  }
 
-    function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
+  function clearForm(){
+    editingId = null;
+    els.editHint.textContent = "";
+    els.saveBtn.textContent = "Guardar registo";
+    els.date.value = localDate(new Date());
+    els.in1.value = "";
+    els.outLunch.value = "";
+    els.inLunch.value = "";
+    els.out1.value = "";
+    els.note.value = "";
+    checkDayWarning();
+  }
 
-    function portugalHolidays(year) {
-      const fixed = [
-        [`${year}-01-01`, 'Ano Novo'], [`${year}-04-25`, 'Dia da Liberdade'], [`${year}-05-01`, 'Dia do Trabalhador'],
-        [`${year}-06-10`, 'Dia de Portugal'], [`${year}-08-15`, 'Assunção de Nossa Senhora'], [`${year}-10-05`, 'Implantação da República'],
-        [`${year}-11-01`, 'Todos os Santos'], [`${year}-12-01`, 'Restauração da Independência'], [`${year}-12-08`, 'Imaculada Conceição'], [`${year}-12-25`, 'Natal']
-      ];
-      const easter = easterDate(year);
-      fixed.push([dateKey(addDays(easter, -2)), 'Sexta-feira Santa']);
-      fixed.push([dateKey(addDays(easter, 60)), 'Corpo de Deus']);
-      return fixed;
+  function addOrUpdate(){
+    const rec = {
+      id: editingId || crypto.randomUUID(),
+      date: els.date.value,
+      in1: els.in1.value,
+      outLunch: els.outLunch.value,
+      inLunch: els.inLunch.value,
+      out1: els.out1.value,
+      note: els.note.value.trim()
+    };
+    if(!rec.date) return alert("Escolhe uma data.");
+    if(isWeekend(rec.date) || holidayName(rec.date)){
+      if(!confirm("Este dia é fim de semana/feriado. Queres guardar mesmo assim?")) return;
     }
+    const calc = calculate(rec);
+    if(!calc.valid) return alert(calc.msg);
 
-    function holidayMap(year) {
-      const map = new Map(portugalHolidays(year));
-      customHolidays.forEach(h => {
-        if (h.date.startsWith(String(year))) map.set(h.date, h.name || 'Feriado personalizado');
-      });
-      return map;
-    }
-
-    function isWeekend(date) { const day = date.getDay(); return day === 0 || day === 6; }
-    function isHoliday(date) { return holidayMap(date.getFullYear()).has(dateKey(date)); }
-    function isCountedDay(date) { return !isWeekend(date) && !isHoliday(date); }
-
-    function calculateRecord(r) {
-      const start = minutesFromTime(r.start), out = minutesFromTime(r.lunchOut), back = minutesFromTime(r.lunchIn), end = minutesFromTime(r.end);
-      const lunch = Math.max(0, back - out);
-      const extraLunch = Math.max(0, lunch - MIN_LUNCH_MINUTES);
-      const effectiveLunch = Math.max(MIN_LUNCH_MINUTES, lunch);
-      const worked = Math.max(0, end - start - effectiveLunch);
-      let rawBalance = worked - WORK_DAY_MINUTES;
-      let countedBalance = rawBalance > 0 && rawBalance < POSITIVE_THRESHOLD ? 0 : rawBalance;
-      const date = parseDateKey(r.date);
-      if (!isCountedDay(date)) countedBalance = 0;
-      return { lunch, extraLunch, worked, rawBalance, countedBalance, counted: isCountedDay(date) };
-    }
-
-    function populateSelectors() {
-      el('monthSelect').innerHTML = monthNames.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
-      const now = new Date();
-      const years = new Set([now.getFullYear()-1, now.getFullYear(), now.getFullYear()+1]);
-      records.forEach(r => years.add(parseDateKey(r.date).getFullYear()));
-      el('yearSelect').innerHTML = [...years].sort((a,b)=>a-b).map(y=>`<option value="${y}">${y}</option>`).join('');
-      el('monthSelect').value = now.getMonth();
-      el('yearSelect').value = now.getFullYear();
-      el('date').value = dateKey(now);
-    }
-
-    function monthRecords() {
-      const m = Number(el('monthSelect').value), y = Number(el('yearSelect').value);
-      return records.filter(r => {
-        const d = parseDateKey(r.date);
-        return d.getMonth() === m && d.getFullYear() === y;
-      }).sort((a,b)=>a.date.localeCompare(b.date));
-    }
-
-    function render() {
-      const rows = monthRecords();
-      let balance = 0, extraDone = 0, owed = 0, daysWorked = 0;
-      const body = el('recordsBody');
-      body.innerHTML = '';
-
-      rows.forEach((r, idx) => {
-        const calc = calculateRecord(r);
-        balance += calc.countedBalance;
-        if (calc.counted && calc.countedBalance > 0) extraDone += calc.countedBalance;
-        if (calc.counted && calc.countedBalance < 0) owed += Math.abs(calc.countedBalance);
-        if (calc.counted) daysWorked++;
-
-        let status = '<span class="pill neutral">Não contado</span>';
-        if (calc.counted && calc.countedBalance > 0) status = '<span class="pill good">Positivo</span>';
-        if (calc.counted && calc.countedBalance < 0) status = '<span class="pill bad">Negativo</span>';
-        if (calc.counted && calc.countedBalance === 0 && calc.rawBalance > 0 && calc.rawBalance < POSITIVE_THRESHOLD) status = '<span class="pill neutral">Extra &lt; 15m</span>';
-        if (calc.counted && calc.countedBalance === 0 && calc.rawBalance === 0) status = '<span class="pill neutral">Certo</span>';
-
-        const date = parseDateKey(r.date);
-        const hName = holidayMap(date.getFullYear()).get(r.date);
-        const dateLabel = `${r.date}${hName ? ' · ' + hName : isWeekend(date) ? ' · fim de semana' : ''}`;
-        body.innerHTML += `<tr>
-          <td data-label="Data">${dateLabel}</td>
-          <td data-label="Entrada">${r.start}</td>
-          <td data-label="Almoço">${r.lunchOut}</td>
-          <td data-label="Regresso">${r.lunchIn}</td>
-          <td data-label="Saída">${r.end}</td>
-          <td data-label="Trabalhado">${formatMinutes(calc.worked)}</td>
-          <td data-label="Saldo" class="${calc.countedBalance >= 0 ? 'good' : 'bad'}">${formatMinutes(calc.countedBalance)}</td>
-          <td data-label="Estado">${status}</td>
-          <td data-label="Ações"><button class="danger small" onclick="deleteRecord('${r.date}')">Apagar</button></td>
-        </tr>`;
-      });
-
-      el('balance').textContent = formatMinutes(balance);
-      el('balance').className = balance >= 0 ? 'good' : 'bad';
-      el('extraDone').textContent = formatMinutes(extraDone);
-      el('owed').textContent = formatMinutes(owed);
-      el('daysWorked').textContent = daysWorked;
-      el('monthInfo').textContent = 'Regra aplicada: almoço mínimo de 1h; almoço acima de 1h é descontado; saldo positivo só entra a partir de 15m extra.';
-      renderChart(rows);
-      renderHolidays();
-    }
-
-    function renderChart(rows) {
-      const canvas = el('chart');
-      const dpr = window.devicePixelRatio || 1;
-      const cssWidth = Math.max(300, canvas.clientWidth || 900);
-      const cssHeight = Math.max(240, canvas.clientHeight || 330);
-      canvas.width = Math.round(cssWidth * dpr);
-      canvas.height = Math.round(cssHeight * dpr);
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0,0,cssWidth,cssHeight);
-      const padding = cssWidth < 520 ? 34 : 50;
-      const w = cssWidth, h = cssHeight;
-      const points = rows.map(r => ({ date: r.date.slice(8,10), value: calculateRecord(r).countedBalance }));
-      ctx.font = '24px system-ui';
-      ctx.fillStyle = 'rgba(238,242,255,.9)';
-      if (!points.length) { ctx.fillText('Sem registos neste mês', padding, h/2); return; }
-      const values = points.map(p=>p.value);
-      const max = Math.max(60, ...values);
-      const min = Math.min(-60, ...values);
-      const range = max - min || 1;
-      const xStep = points.length === 1 ? 0 : (w - padding*2) / (points.length - 1);
-      const y = val => h - padding - ((val - min) / range) * (h - padding*2);
-      const x = i => padding + i*xStep;
-
-      ctx.strokeStyle = 'rgba(255,255,255,.18)';
-      ctx.lineWidth = 1;
-      for (let i=0;i<=4;i++) {
-        const yy = padding + i*(h-padding*2)/4;
-        ctx.beginPath(); ctx.moveTo(padding, yy); ctx.lineTo(w-padding, yy); ctx.stroke();
-      }
-      const zeroY = y(0);
-      ctx.strokeStyle = 'rgba(255,255,255,.45)';
-      ctx.beginPath(); ctx.moveTo(padding, zeroY); ctx.lineTo(w-padding, zeroY); ctx.stroke();
-
-      ctx.strokeStyle = '#60a5fa';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      points.forEach((p,i)=> i ? ctx.lineTo(x(i), y(p.value)) : ctx.moveTo(x(i), y(p.value)) );
-      ctx.stroke();
-
-      points.forEach((p,i)=>{
-        ctx.beginPath(); ctx.arc(x(i), y(p.value), 6, 0, Math.PI*2); ctx.fillStyle = p.value >= 0 ? '#22c55e' : '#ef4444'; ctx.fill();
-        ctx.fillStyle = 'rgba(238,242,255,.82)'; ctx.font = '16px system-ui'; ctx.fillText(p.date, x(i)-8, h-18);
-        ctx.fillText(formatMinutes(p.value), x(i)-20, y(p.value)-12);
-      });
-    }
-
-    function renderHolidays() {
-      const year = Number(el('yearSelect').value) || new Date().getFullYear();
-      const all = [...holidayMap(year).entries()].sort((a,b)=>a[0].localeCompare(b[0]));
-      el('holidayList').innerHTML = all.map(([date,name]) => {
-        const isCustom = customHolidays.some(h => h.date === date);
-        return `<div class="holiday-item"><span><strong>${date}</strong> · ${name}</span>${isCustom ? `<button class="danger small" onclick="removeHoliday('${date}')">Remover</button>` : ''}</div>`;
-      }).join('');
-    }
-
-    window.deleteRecord = function(date) {
-      const i = records.findIndex(r => r.date === date);
-      if (i >= 0 && confirm('Apagar este registo?')) { records.splice(i,1); saveRecords(); render(); }
-    }
-    window.removeHoliday = function(date) {
-      customHolidays = customHolidays.filter(h => h.date !== date);
-      saveHolidays(); render();
-    }
-
-    el('entryForm').addEventListener('submit', e => {
-      e.preventDefault();
-      const r = { date: el('date').value, start: el('start').value, lunchOut: el('lunchOut').value, lunchIn: el('lunchIn').value, end: el('end').value };
-      const times = [r.start, r.lunchOut, r.lunchIn, r.end].map(minutesFromTime);
-      const msg = el('formMessage');
-      if (!(times[0] < times[1] && times[1] <= times[2] && times[2] < times[3])) {
-        msg.textContent = 'Verifica as horas: devem estar por ordem cronológica.'; msg.classList.remove('hidden'); return;
-      }
-      const d = parseDateKey(r.date);
-      if (!isCountedDay(d) && !confirm('Este dia é fim de semana ou feriado. Guardar mesmo assim? Não contará para o saldo.')) return;
-      const existing = records.findIndex(x => x.date === r.date);
-      if (existing >= 0) records[existing] = r; else records.push(r);
-      saveRecords();
-      msg.textContent = 'Registo guardado.'; msg.classList.remove('hidden');
-      render();
-    });
-
-    el('monthSelect').addEventListener('change', render);
-    el('yearSelect').addEventListener('change', render);
-    el('todayBtn').addEventListener('click', () => { const n = new Date(); el('monthSelect').value = n.getMonth(); el('yearSelect').value = n.getFullYear(); render(); });
-    el('addHolidayBtn').addEventListener('click', () => {
-      const date = el('holidayDate').value, name = el('holidayName').value.trim() || 'Feriado personalizado';
-      if (!date) return alert('Escolhe uma data.');
-      customHolidays = customHolidays.filter(h => h.date !== date);
-      customHolidays.push({ date, name }); saveHolidays(); render();
-    });
-    el('clearMonthBtn').addEventListener('click', () => {
-      const rows = monthRecords();
-      if (!rows.length) return;
-      if (!confirm('Apagar todos os registos deste mês?')) return;
-      rows.forEach(r => { const i = records.findIndex(x => x.date === r.date); if (i >= 0) records.splice(i,1); });
-      saveRecords(); render();
-    });
-    el('exportBtn').addEventListener('click', () => {
-      const rows = monthRecords();
-      const csvRows = [['Data','Entrada','Saida almoco','Entrada apos almoco','Saida','Trabalhado','Saldo contado','Saldo real']];
-      rows.forEach(r => { const c = calculateRecord(r); csvRows.push([r.date,r.start,r.lunchOut,r.lunchIn,r.end,formatMinutes(c.worked),formatMinutes(c.countedBalance),formatMinutes(c.rawBalance)]); });
-      const csv = csvRows.map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(';')).join('\n');
-      const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `saldo_horario_${el('yearSelect').value}_${pad(Number(el('monthSelect').value)+1)}.csv`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-    });
-
-    function showBackupMessage(msg) {
-      const box = el('backupMessage');
-      box.textContent = msg;
-      box.classList.remove('hidden');
-      setTimeout(() => box.classList.add('hidden'), 4500);
-    }
-
-    el('backupBtn').addEventListener('click', () => {
-      const payload = {
-        app: 'Calculadora de Saldo Horario',
-        version: 2,
-        exportedAt: new Date().toISOString(),
-        records,
-        customHolidays
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json;charset=utf-8'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `backup_saldo_horario_${new Date().toISOString().slice(0,10)}.json`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      showBackupMessage('Backup exportado. Envia esse ficheiro para o telemóvel e importa-o nesta app.');
-    });
-
-    el('importBtn').addEventListener('click', () => el('importFile').click());
-
-    el('importFile').addEventListener('change', async (event) => {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        if (!data || !Array.isArray(data.records)) throw new Error('Formato inválido');
-        const importedRecords = data.records.filter(r => r.date && r.start && r.lunchOut && r.lunchIn && r.end);
-        const importedHolidays = Array.isArray(data.customHolidays) ? data.customHolidays.filter(h => h.date && h.name) : [];
-        if (!confirm(`Importar ${importedRecords.length} registos? Os registos com a mesma data serão substituídos.`)) return;
-        importedRecords.forEach(r => {
-          const i = records.findIndex(x => x.date === r.date);
-          if (i >= 0) records[i] = r; else records.push(r);
-        });
-        importedHolidays.forEach(h => {
-          const i = customHolidays.findIndex(x => x.date === h.date);
-          if (i >= 0) customHolidays[i] = h; else customHolidays.push(h);
-        });
-        saveRecords();
-        saveHolidays();
-        render();
-        showBackupMessage('Backup importado com sucesso.');
-      } catch (err) {
-        alert('Não consegui importar o ficheiro. Confirma se é o backup JSON exportado pela app.');
-      } finally {
-        event.target.value = '';
-      }
-    });
-
-
-    window.addEventListener('resize', () => renderChart(monthRecords()));
-
-    populateSelectors();
+    records = records.filter(r => r.id !== rec.id && r.date !== rec.date);
+    records.push(rec);
+    records.sort((a,b)=>a.date.localeCompare(b.date));
+    save();
+    clearForm();
     render();
-  </script>
+  }
+
+  function editRecord(id){
+    const r = records.find(x=>x.id===id);
+    if(!r) return;
+    editingId = id;
+    els.date.value = r.date;
+    els.in1.value = r.in1;
+    els.outLunch.value = r.outLunch;
+    els.inLunch.value = r.inLunch;
+    els.out1.value = r.out1;
+    els.note.value = r.note || "";
+    els.editHint.textContent = "a editar";
+    els.saveBtn.textContent = "Guardar alterações";
+    checkDayWarning();
+    location.hash = "#registar";
+  }
+
+  function deleteRecord(id){
+    if(!confirm("Apagar este registo?")) return;
+    records = records.filter(r=>r.id!==id);
+    save();
+    render();
+  }
+
+  function monthRecords(){
+    const m = els.month.value;
+    return records.filter(r=>r.date.startsWith(m));
+  }
+
+  function renderStats(list){
+    let balance=0, extra=0, owed=0;
+    for(const r of list){
+      if(isWeekend(r.date) || holidayName(r.date)) continue;
+      const c = calculate(r);
+      if(!c.valid) continue;
+      balance += c.countedBalance;
+      extra += c.extra;
+      owed += c.owed;
+    }
+    els.monthBalance.textContent = formatMinutes(balance,true);
+    els.monthBalance.className = balance>0 ? "good" : balance<0 ? "bad" : "";
+    els.extraDone.textContent = formatMinutes(extra);
+    els.owedTime.textContent = formatMinutes(owed);
+  }
+
+  function drawChart(list){
+    const canvas = els.chart;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width*dpr);
+    canvas.height = Math.round(rect.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    const w=rect.width,h=rect.height;
+    ctx.clearRect(0,0,w,h);
+    const padL=42,padR=12,padT=18,padB=34;
+    const usableW=w-padL-padR, usableH=h-padT-padB;
+
+    const points=[];
+    let cumulative=0;
+    const sorted=[...list].sort((a,b)=>a.date.localeCompare(b.date));
+    for(const r of sorted){
+      if(isWeekend(r.date) || holidayName(r.date)) continue;
+      const c=calculate(r);
+      if(c.valid){
+        cumulative += c.countedBalance;
+        points.push({date:r.date, val:cumulative});
+      }
+    }
+
+    ctx.font="12px system-ui";
+    ctx.strokeStyle="#e5e7eb";
+    ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      const y=padT+(usableH*i/4);
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+    }
+
+    if(points.length===0){
+      ctx.fillStyle="#6b7280";
+      ctx.textAlign="center";
+      ctx.fillText("Sem dados para este mês", w/2, h/2);
+      return;
+    }
+
+    const vals=points.map(p=>p.val);
+    let min=Math.min(0,...vals), max=Math.max(0,...vals);
+    if(min===max){ min-=60; max+=60; }
+    const range=max-min;
+    const xFor=i => padL + (points.length===1 ? usableW/2 : usableW*i/(points.length-1));
+    const yFor=v => padT + usableH - ((v-min)/range)*usableH;
+
+    const zeroY=yFor(0);
+    ctx.strokeStyle="#9ca3af";
+    ctx.beginPath(); ctx.moveTo(padL,zeroY); ctx.lineTo(w-padR,zeroY); ctx.stroke();
+
+    ctx.strokeStyle="#2563eb";
+    ctx.lineWidth=3;
+    ctx.beginPath();
+    points.forEach((p,i)=>{
+      const x=xFor(i), y=yFor(p.val);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    points.forEach((p,i)=>{
+      const x=xFor(i), y=yFor(p.val);
+      ctx.fillStyle="#fff";
+      ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle="#2563eb"; ctx.lineWidth=3; ctx.stroke();
+    });
+
+    ctx.fillStyle="#6b7280";
+    ctx.textAlign="right";
+    ctx.fillText(formatMinutes(max,true), padL-6, padT+4);
+    ctx.fillText("00:00", padL-6, zeroY+4);
+    ctx.fillText(formatMinutes(min,true), padL-6, padT+usableH);
+
+    ctx.textAlign="center";
+    ctx.fillStyle="#6b7280";
+    const step=Math.ceil(points.length/4);
+    points.forEach((p,i)=>{
+      if(i%step===0 || i===points.length-1){
+        ctx.fillText(p.date.slice(8,10), xFor(i), h-12);
+      }
+    });
+  }
+
+  function renderRecords(list){
+    els.records.innerHTML = "";
+    if(list.length===0){
+      els.records.innerHTML = `<div class="empty">Ainda não tens registos neste mês.</div>`;
+      return;
+    }
+    for(const r of [...list].sort((a,b)=>b.date.localeCompare(a.date))){
+      const c=calculate(r);
+      const ignored = isWeekend(r.date) || holidayName(r.date);
+      const bal = c.valid ? c.countedBalance : 0;
+      const div=document.createElement("div");
+      div.className="record";
+      const titleDate = new Intl.DateTimeFormat("pt-PT",{weekday:"short",day:"2-digit",month:"2-digit"}).format(new Date(r.date+"T12:00:00"));
+      div.innerHTML = `
+        <div>
+          <div class="record-title">${titleDate} ${ignored ? '<span class="muted">· não contado</span>' : ''}</div>
+          <div class="record-meta">
+            <span>Entrada: <b>${r.in1}</b></span>
+            <span>Almoço: <b>${r.outLunch}–${r.inLunch}</b></span>
+            <span>Saída: <b>${r.out1}</b></span>
+            <span>Saldo: <b class="${bal>0?'good':bal<0?'bad':''}">${formatMinutes(bal,true)}</b></span>
+          </div>
+          ${r.note ? `<div class="muted" style="font-size:13px;margin-top:8px">${r.note}</div>` : ""}
+        </div>
+        <div>
+          <div class="balance-badge ${bal>0?'good':bal<0?'bad':'muted'}">${formatMinutes(bal,true)}</div>
+          <div class="record-actions" style="margin-top:8px">
+            <button class="light" data-edit="${r.id}">Editar</button>
+            <button class="danger" data-del="${r.id}">Apagar</button>
+          </div>
+        </div>`;
+      els.records.appendChild(div);
+    }
+  }
+
+  function render(){
+    const list=monthRecords();
+    renderStats(list);
+    renderRecords(list);
+    drawChart(list);
+  }
+
+  function download(filename, text, type="application/json"){
+    const blob = new Blob([text], {type});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  $("exportJson").onclick = () => download(`saldo-horario-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify({records, customHolidays}, null, 2));
+  $("importJsonBtn").onclick = () => $("importJson").click();
+  $("importJson").onchange = e => {
+    const file=e.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{
+        const data=JSON.parse(reader.result);
+        if(!Array.isArray(data.records)) throw new Error("Formato inválido");
+        records=data.records;
+        customHolidays=Array.isArray(data.customHolidays)?data.customHolidays:[];
+        save(); render(); alert("Backup importado.");
+      }catch(err){ alert("Não foi possível importar o ficheiro."); }
+    };
+    reader.readAsText(file);
+  };
+
+  $("exportCsv").onclick = () => {
+    const rows = [["Data","Entrada","Saida almoco","Entrada almoco","Saida","Saldo contado","Nota"]];
+    for(const r of monthRecords()){
+      const c=calculate(r);
+      rows.push([r.date,r.in1,r.outLunch,r.inLunch,r.out1,c.valid?formatMinutes(c.countedBalance,true):"",r.note||""]);
+    }
+    const csv = rows.map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");
+    download(`saldo-horario-${els.month.value}.csv`, csv, "text/csv;charset=utf-8");
+  };
+
+  $("deleteMonth").onclick = () => {
+    if(!confirm(`Apagar todos os registos de ${els.month.value}?`)) return;
+    records = records.filter(r=>!r.date.startsWith(els.month.value));
+    save(); render();
+  };
+
+  $("addHoliday").onclick = () => {
+    const date=$("holidayDate").value, name=$("holidayName").value.trim() || "Feriado";
+    if(!date) return alert("Escolhe a data do feriado.");
+    customHolidays = customHolidays.filter(h=>h.date!==date);
+    customHolidays.push({date,name});
+    save(); $("holidayDate").value=""; $("holidayName").value=""; render(); checkDayWarning();
+  };
+  $("clearHolidays").onclick = () => {
+    if(!confirm("Limpar todos os feriados personalizados?")) return;
+    customHolidays=[]; save(); render(); checkDayWarning();
+  };
+
+  els.saveBtn.onclick=addOrUpdate;
+  els.clearBtn.onclick=clearForm;
+  els.date.onchange=checkDayWarning;
+  els.month.onchange=render;
+  els.target.onchange=render;
+  window.addEventListener("resize", ()=>drawChart(monthRecords()));
+
+  els.records.addEventListener("click", e=>{
+    const edit=e.target.getAttribute("data-edit");
+    const del=e.target.getAttribute("data-del");
+    if(edit) editRecord(edit);
+    if(del) deleteRecord(del);
+  });
+
+  checkDayWarning();
+  render();
+})();
+</script>
 </body>
 </html>
