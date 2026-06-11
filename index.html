@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111827">
-  <title>Saldo TAP v6</title>
+  <title>Saldo TAP v7</title>
   <style>
     :root{
       --bg:#f3f4f6;
@@ -433,6 +433,8 @@
             </div>
           </div>
           <div class="note" id="dayWarning" style="display:none;margin-top:12px"></div>
+          <div class="note" style="margin-top:12px">Horário flexível: só conta trabalho entre <b>07:05</b> e <b>19:55</b>. Período obrigatório: <b>10:00–16:00</b>.</div>
+          <div class="note" id="exitSuggestion" style="display:none;margin-top:12px;background:#eff6ff;border-color:#bfdbfe;color:#1e40af"></div>
           <div class="actions">
             <button class="primary" id="saveBtn">Guardar registo</button>
             <button class="light" id="clearBtn">Limpar campos</button>
@@ -506,6 +508,7 @@
             <button class="dark" id="addHoliday">Adicionar feriado</button>
             <button class="light" id="clearHolidays">Limpar feriados</button>
           </div>
+          <div id="holidayList" class="records" style="margin-top:12px"></div>
         </div>
 
         <div class="card section-anchor" id="registos">
@@ -525,16 +528,28 @@
 
 <script>
 (() => {
-  const STORAGE_KEY = "saldoHorarioTap.v6.mobile";
-  const HOLIDAY_KEY = "saldoHorarioTap.holidays.v6";
+  const STORAGE_KEY = "saldoHorarioTap.v10.mobile";
+  const HOLIDAY_KEY = "saldoHorarioTap.holidays.v10";
   const OLD_STORAGE_KEYS = [
+    "saldoHorarioTap.v9.mobile",
+    "saldoHorarioTap.v8.mobile",
+    "saldoHorarioTap.v7.mobile",
+    "saldoHorarioTap.v6.mobile",
     "saldoHorarioTap.v5.mobile",
     "saldoHorarioTap.v4.mobile",
+    "saldoHorarioTap.v7.records",
+    "saldoHorarioTap.v8.records",
     "saldoHorario.records.v1"
   ];
   const OLD_HOLIDAY_KEYS = [
+    "saldoHorarioTap.holidays.v9",
+    "saldoHorarioTap.holidays.v8",
+    "saldoHorarioTap.holidays.v7",
+    "saldoHorarioTap.holidays.v6",
     "saldoHorarioTap.holidays.v5",
     "saldoHorarioTap.holidays.v4",
+    "saldoHorarioTap.v7.holidays",
+    "saldoHorarioTap.v8.holidays",
     "saldoHorario.customHolidays.v1"
   ];
 
@@ -553,7 +568,7 @@
       note: r.note || r.obs || ""
     };
 
-    if(!normalized.date || !normalized.in1 || !normalized.outLunch || !normalized.inLunch || !normalized.out1) {
+    if(!normalized.date) {
       return null;
     }
 
@@ -563,6 +578,7 @@
   function normalizeHoliday(h){
     if(!h || !h.date) return null;
     return {
+      id: h.id || crypto.randomUUID(),
       date: h.date,
       name: h.name || h.title || "Feriado"
     };
@@ -618,13 +634,14 @@
     date:$("date"), in1:$("in1"), outLunch:$("outLunch"), inLunch:$("inLunch"), out1:$("out1"), note:$("note"),
     month:$("month"), target:$("target"), saveBtn:$("saveBtn"), clearBtn:$("clearBtn"),
     monthBalance:$("monthBalance"), extraDone:$("extraDone"), owedTime:$("owedTime"),
-    records:$("records"), chart:$("chart"), dayWarning:$("dayWarning"), editHint:$("editHint"),
-    todayPill:$("todayPill")
+    records:$("records"), chart:$("chart"), dayWarning:$("dayWarning"), exitSuggestion:$("exitSuggestion"), editHint:$("editHint"),
+    holidayList:$("holidayList"), addHoliday:$("addHoliday"), holidayDate:$("holidayDate"), holidayName:$("holidayName"), todayPill:$("todayPill")
   };
 
   const pad = n => String(n).padStart(2,"0");
   const today = new Date();
   const localDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const FLEX_START = 7*60+5, FLEX_END = 19*60+55, CORE_START = 10*60, CORE_END = 16*60;
   els.date.value = localDate(today);
   els.month.value = `${today.getFullYear()}-${pad(today.getMonth()+1)}`;
   els.todayPill.textContent = new Intl.DateTimeFormat("pt-PT",{weekday:"short",day:"2-digit",month:"short"}).format(today);
@@ -976,10 +993,276 @@
     URL.revokeObjectURL(a.href);
   }
 
+
+  // ===== v7 overrides: dias incompletos + sugestão de saída + feriados editáveis =====
+  let editingHolidayId = null;
+  function isComplete(rec){ return !!(rec.in1 && rec.outLunch && rec.inLunch && rec.out1); }
+  function timeFromMinutes(min){ min=Math.round(min)%1440; if(min<0) min+=1440; return `${pad(Math.floor(min/60))}:${pad(min%60)}`; }
+  function validatePartial(rec){
+    const a = minutesFromTime(rec.in1);
+    const d = minutesFromTime(rec.out1);
+
+    const seq = [
+      ["Entrada", rec.in1],
+      ["Saída almoço", rec.outLunch],
+      ["Entrada almoço", rec.inLunch],
+      ["Saída", rec.out1]
+    ].map(([name, time]) => [name, minutesFromTime(time)]).filter(item => item[1] !== null);
+
+    for(let i = 1; i < seq.length; i++){
+      if(seq[i][1] < seq[i-1][1]){
+        return `Confirma a ordem das horas: ${seq[i][0]} está antes de ${seq[i-1][0]}.`;
+      }
+    }
+
+    if(a !== null && a < FLEX_START){
+      return "A entrada está antes das 07:05. Para efeitos de saldo, só podes contar trabalho a partir das 07:05.";
+    }
+    if(a !== null && a > CORE_START){
+      return "A entrada está depois das 10:00. O período obrigatório começa às 10:00.";
+    }
+    if(d !== null && d > FLEX_END){
+      return "A saída está depois das 19:55. Para efeitos de saldo, só podes contar trabalho até às 19:55.";
+    }
+    if(d !== null && d < CORE_END){
+      return "A saída está antes das 16:00. O período obrigatório termina às 16:00.";
+    }
+
+    return "";
+  }
+
+  function calculateWithExit(rec, exitMin){
+    const a=minutesFromTime(rec.in1), b=minutesFromTime(rec.outLunch), c=minutesFromTime(rec.inLunch);
+    if(a===null || exitMin===null) return null;
+    const realLunch = (b!==null && c!==null && c>=b) ? c-b : 60;
+    const lunchPenalty = Math.max(0, realLunch-60);
+    const expectedSpan = targetMinutes() + 60;
+    const actualSpan = exitMin-a;
+    let entryExitBalanceCounted = actualSpan - expectedSpan;
+    if(entryExitBalanceCounted > 0 && entryExitBalanceCounted < 15) entryExitBalanceCounted = 0;
+    const countedBalance = entryExitBalanceCounted - lunchPenalty;
+    return {valid:true, realLunch, lunchPenalty, countedBalance, extra:Math.max(0,countedBalance), owed:Math.max(0,-countedBalance)};
+  }
+  function calculate(rec){
+    const a=minutesFromTime(rec.in1), b=minutesFromTime(rec.outLunch), c=minutesFromTime(rec.inLunch), d=minutesFromTime(rec.out1);
+    if([a,b,c,d].some(x=>x===null)) return {valid:false,msg:'Registo incompleto.'};
+    const msg=validatePartial(rec); if(msg) return {valid:false,msg};
+    if(!(a < b && b <= c && c < d)) return {valid:false,msg:'Confirma a ordem das horas.'};
+    return calculateWithExit(rec,d);
+  }
+  function getMonthlyBalance(list, excludeId=null){
+    let balance=0, extra=0, owed=0;
+    for(const r of list){
+      if(r.id===excludeId || isWeekend(r.date) || holidayName(r.date) || !isComplete(r)) continue;
+      const c=calculate(r); if(!c.valid) continue;
+      balance += c.countedBalance; extra += c.extra; owed += c.owed;
+    }
+    return {balance,extra,owed};
+  }
+  function currentFormRecord(){ return {id:editingId||'__form__', date:els.date.value, in1:els.in1.value, outLunch:els.outLunch.value, inLunch:els.inLunch.value, out1:els.out1.value, note:els.note.value.trim()}; }
+  function findExitSuggestion(rec, baseBalance){
+    if(!rec.in1) return null;
+
+    const a = minutesFromTime(rec.in1);
+    const b = minutesFromTime(rec.outLunch);
+    const c = minutesFromTime(rec.inLunch);
+
+    if(a === null) return null;
+
+    if(a < FLEX_START){
+      return {error:"A entrada está antes das 07:05. Para efeitos de saldo, só podes contar trabalho a partir das 07:05."};
+    }
+    if(a > CORE_START){
+      return {error:"A entrada está depois das 10:00. O período obrigatório começa às 10:00."};
+    }
+
+    const msg = validatePartial(rec);
+    if(msg) return {error: msg};
+
+    let minExit = Math.max(a + 1, CORE_END);
+
+    if(c !== null){
+      minExit = Math.max(minExit, c + 1);
+    }else if(b !== null){
+      minExit = Math.max(minExit, b + 60);
+    }
+
+    const needed = baseBalance < 0 ? -baseBalance : 0;
+    const assumedLunch = !(b !== null && c !== null);
+
+    if(minExit > FLEX_END){
+      return {
+        uncompensable: true,
+        exit: FLEX_END,
+        remaining: needed,
+        assumedLunch
+      };
+    }
+
+    for(let exit = minExit; exit <= FLEX_END; exit++){
+      const calc = calculateWithExit(rec, exit);
+      if(calc && calc.countedBalance >= needed){
+        return {
+          exit,
+          calc,
+          final: baseBalance + calc.countedBalance,
+          assumedLunch
+        };
+      }
+    }
+
+    const maxCalc = calculateWithExit(rec, FLEX_END);
+    const possible = maxCalc ? maxCalc.countedBalance : 0;
+
+    return {
+      uncompensable: true,
+      exit: FLEX_END,
+      remaining: Math.max(0, needed - possible),
+      assumedLunch
+    };
+  }
+
+  function updateExitSuggestion(){
+    const rec = currentFormRecord();
+
+    els.exitSuggestion.style.display = "none";
+    els.exitSuggestion.textContent = "";
+
+    if(!rec.date || isComplete(rec) || isWeekend(rec.date) || holidayName(rec.date) || !rec.in1){
+      return;
+    }
+
+    const base = getMonthlyBalance(monthRecords(), editingId).balance;
+
+    if(base > 0){
+      return;
+    }
+
+    const suggestion = findExitSuggestion(rec, base);
+
+    if(!suggestion){
+      return;
+    }
+
+    let text = "";
+
+    if(suggestion.error){
+      text = suggestion.error;
+    }else if(suggestion.uncompensable){
+      text = `Mesmo saindo às 19:55, não consegues zerar o saldo hoje. Deves sair às 19:55 e ainda terás de compensar ${formatMinutes(suggestion.remaining)} noutro dia.`;
+      if(suggestion.assumedLunch){
+        text += " Cálculo feito assumindo almoço normal de 1h.";
+      }
+    }else{
+      if(base < 0){
+        text = `Saldo mensal atual sem este dia: ${formatMinutes(base,true)}. Para zerar o mês, deves sair às ${timeFromMinutes(suggestion.exit)}.`;
+      }else{
+        text = `Saldo mensal atual sem este dia: 00:00. Para manter o mês a zero, deves sair às ${timeFromMinutes(suggestion.exit)}.`;
+      }
+
+      if(suggestion.final !== 0){
+        text += ` Saldo previsto: ${formatMinutes(suggestion.final,true)}.`;
+      }
+
+      if(suggestion.assumedLunch){
+        text += " Cálculo feito assumindo almoço normal de 1h.";
+      }
+    }
+
+    els.exitSuggestion.style.display = "block";
+    els.exitSuggestion.textContent = text;
+  }
+
+  function checkDayWarning(){
+    const date=els.date.value; if(!date){ els.dayWarning.style.display='none'; updateExitSuggestion(); return; }
+    let msg=''; if(isWeekend(date)) msg='Este dia é fim de semana e não deve contar para o saldo.';
+    const h=holidayName(date); if(h) msg=`Este dia é feriado: ${h}. Não deve contar para o saldo.`;
+    els.dayWarning.style.display=msg?'block':'none'; els.dayWarning.textContent=msg; updateExitSuggestion();
+  }
+  function clearForm(){
+    editingId=null; els.editHint.textContent=''; els.saveBtn.textContent='Guardar registo';
+    els.date.value=localDate(new Date()); els.in1.value=''; els.outLunch.value=''; els.inLunch.value=''; els.out1.value=''; els.note.value=''; checkDayWarning();
+  }
+  function addOrUpdate(){
+    const rec=currentFormRecord();
+    if(!rec.date) return alert('Escolhe uma data.');
+    const orderMsg=validatePartial(rec); if(orderMsg) return alert(orderMsg);
+    if(!isComplete(rec) && !rec.in1) return alert('Para guardar um dia incompleto, pelo menos a hora de entrada deve estar preenchida.');
+    if(isWeekend(rec.date) || holidayName(rec.date)){ if(!confirm('Este dia é fim de semana/feriado. Queres guardar mesmo assim?')) return; }
+    if(isComplete(rec)){ const calc=calculate(rec); if(!calc.valid) return alert(calc.msg); }
+    records = records.filter(r => r.id !== rec.id && r.date !== rec.date);
+    records.push(rec); records.sort((a,b)=>a.date.localeCompare(b.date)); save(); clearForm(); render();
+  }
+  function editRecord(id){
+    const r=records.find(x=>x.id===id); if(!r) return; editingId=id;
+    els.date.value=r.date; els.in1.value=r.in1||''; els.outLunch.value=r.outLunch||''; els.inLunch.value=r.inLunch||''; els.out1.value=r.out1||''; els.note.value=r.note||'';
+    els.editHint.textContent='a editar'; els.saveBtn.textContent='Guardar alterações'; checkDayWarning(); location.hash='#registar';
+  }
+  function deleteRecord(id){ if(!confirm('Apagar este registo?')) return; records=records.filter(r=>r.id!==id); save(); render(); updateExitSuggestion(); }
+  function renderStats(list){
+    const m=getMonthlyBalance(list); els.monthBalance.textContent=formatMinutes(m.balance,true); els.monthBalance.className=m.balance>0?'good':m.balance<0?'bad':''; els.extraDone.textContent=formatMinutes(m.extra); els.owedTime.textContent=formatMinutes(m.owed);
+  }
+  function drawChart(list){
+    const canvas=els.chart, ctx=canvas.getContext('2d'), dpr=window.devicePixelRatio||1, rect=canvas.getBoundingClientRect();
+    canvas.width=Math.round(rect.width*dpr); canvas.height=Math.round(rect.height*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=rect.width,h=rect.height,padL=42,padR=12,padT=18,padB=34,usableW=w-padL-padR,usableH=h-padT-padB;
+    ctx.clearRect(0,0,w,h); ctx.font='12px system-ui'; ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){const y=padT+(usableH*i/4); ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();}
+    const points=[]; let cumulative=0;
+    for(const r of [...list].sort((a,b)=>a.date.localeCompare(b.date))){ if(isWeekend(r.date)||holidayName(r.date)||!isComplete(r)) continue; const c=calculate(r); if(c.valid){ cumulative+=c.countedBalance; points.push({date:r.date,val:cumulative}); } }
+    if(!points.length){ ctx.fillStyle='#6b7280'; ctx.textAlign='center'; ctx.fillText('Sem dias completos para este mês',w/2,h/2); return; }
+    let min=Math.min(0,...points.map(p=>p.val)), max=Math.max(0,...points.map(p=>p.val)); if(min===max){min-=60;max+=60;} const range=max-min;
+    const xFor=i=>padL+(points.length===1?usableW/2:usableW*i/(points.length-1)), yFor=v=>padT+usableH-((v-min)/range)*usableH, zeroY=yFor(0);
+    ctx.strokeStyle='#9ca3af'; ctx.beginPath(); ctx.moveTo(padL,zeroY); ctx.lineTo(w-padR,zeroY); ctx.stroke();
+    ctx.strokeStyle='#2563eb'; ctx.lineWidth=3; ctx.beginPath(); points.forEach((p,i)=>{const x=xFor(i),y=yFor(p.val); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);}); ctx.stroke();
+    points.forEach((p,i)=>{const x=xFor(i),y=yFor(p.val); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#2563eb'; ctx.lineWidth=3; ctx.stroke();});
+    ctx.fillStyle='#6b7280'; ctx.textAlign='right'; ctx.fillText(formatMinutes(max,true),padL-6,padT+4); ctx.fillText('00:00',padL-6,zeroY+4); ctx.fillText(formatMinutes(min,true),padL-6,padT+usableH);
+    ctx.textAlign='center'; const step=Math.ceil(points.length/4); points.forEach((p,i)=>{ if(i%step===0||i===points.length-1) ctx.fillText(p.date.slice(8,10),xFor(i),h-12); });
+  }
+  function renderRecords(list){
+    els.records.innerHTML=''; if(list.length===0){ els.records.innerHTML='<div class="empty">Ainda não tens registos neste mês.</div>'; return; }
+    for(const r of [...list].sort((a,b)=>b.date.localeCompare(a.date))){
+      const complete=isComplete(r), c=complete?calculate(r):{valid:false}, ignored=isWeekend(r.date)||holidayName(r.date), bal=c.valid?c.countedBalance:0;
+      const titleDate=new Intl.DateTimeFormat('pt-PT',{weekday:'short',day:'2-digit',month:'2-digit'}).format(new Date(r.date+'T12:00:00'));
+      let status=ignored?'· não contado':complete?'':'· incompleto';
+      let suggestion='';
+      if(!complete && !ignored && r.in1){
+        const base = getMonthlyBalance(monthRecords(), r.id).balance;
+        if(base <= 0){
+          const s = findExitSuggestion(r, base);
+          if(s){
+            let txt = "";
+            if(s.error){
+              txt = s.error;
+            }else if(s.uncompensable){
+              txt = `Mesmo saindo às 19:55, ainda terás de compensar ${formatMinutes(s.remaining)} noutro dia`;
+            }else{
+              txt = base < 0 ? `Sair às ${timeFromMinutes(s.exit)} para zerar o mês` : `Sair às ${timeFromMinutes(s.exit)} para manter o mês a 0`;
+              if(s.final !== 0) txt += ` (${formatMinutes(s.final,true)})`;
+            }
+            if(s.assumedLunch) txt += " · almoço assumido: 1h";
+            suggestion = `<div class="note" style="margin-top:8px;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">${txt}.</div>`;
+          }
+        }
+      }
+      const div=document.createElement('div'); div.className='record'; div.innerHTML=`
+        <div><div class="record-title">${titleDate} <span class="muted">${status}</span></div>
+          <div class="record-meta"><span>Entrada: <b>${r.in1||'-'}</b></span><span>Almoço: <b>${r.outLunch||'-'}–${r.inLunch||'-'}</b></span><span>Saída: <b>${r.out1||'-'}</b></span><span>Saldo: <b class="${bal>0?'good':bal<0?'bad':'muted'}">${complete?formatMinutes(bal,true):'—'}</b></span></div>
+          ${r.note?`<div class="muted" style="font-size:13px;margin-top:8px">${r.note}</div>`:''}${suggestion}</div>
+        <div><div class="balance-badge ${bal>0?'good':bal<0?'bad':'muted'}">${complete?formatMinutes(bal,true):'Incompleto'}</div><div class="record-actions" style="margin-top:8px"><button class="light" data-edit="${r.id}">Editar</button><button class="danger" data-del="${r.id}">Apagar</button></div></div>`;
+      els.records.appendChild(div);
+    }
+  }
+  function renderHolidays(){
+    if(!els.holidayList) return; els.holidayList.innerHTML='';
+    if(!customHolidays.length){ els.holidayList.innerHTML='<div class="empty">Sem feriados personalizados.</div>'; return; }
+    for(const h of [...customHolidays].sort((a,b)=>a.date.localeCompare(b.date))){ const div=document.createElement('div'); div.className='record'; div.innerHTML=`<div><div class="record-title">${h.date}</div><div class="muted">${h.name}</div></div><div class="record-actions"><button class="light" data-edit-holiday="${h.id||h.date}">Editar</button><button class="danger" data-del-holiday="${h.id||h.date}">Apagar</button></div>`; els.holidayList.appendChild(div); }
+  }
+  function render(){ const list=monthRecords(); renderStats(list); renderRecords(list); renderHolidays(); drawChart(list); updateExitSuggestion(); }
   $("exportJson").onclick = () => {
     const payload = {
       app: "Calculadora de Saldo Horario",
-      version: 6,
+      version: 10,
       exportedAt: new Date().toISOString(),
       records,
       customHolidays
@@ -1047,21 +1330,27 @@
     save(); render();
   };
 
-  $("addHoliday").onclick = () => {
-    const date=$("holidayDate").value, name=$("holidayName").value.trim() || "Feriado";
+  function saveHoliday(){
+    const date=els.holidayDate.value, name=els.holidayName.value.trim() || "Feriado";
     if(!date) return alert("Escolhe a data do feriado.");
-    customHolidays = customHolidays.filter(h=>h.date!==date);
-    customHolidays.push({date,name});
-    save(); $("holidayDate").value=""; $("holidayName").value=""; render(); checkDayWarning();
-  };
+    if(editingHolidayId){
+      const h=customHolidays.find(x=>(x.id||x.date)===editingHolidayId);
+      if(h){ h.date=date; h.name=name; if(!h.id) h.id=crypto.randomUUID(); }
+    } else {
+      customHolidays = customHolidays.filter(h=>h.date!==date);
+      customHolidays.push({id:crypto.randomUUID(),date,name});
+    }
+    editingHolidayId=null; els.addHoliday.textContent="Adicionar feriado"; els.holidayDate.value=""; els.holidayName.value=""; save(); render(); checkDayWarning();
+  }
+  $("addHoliday").onclick = saveHoliday;
   $("clearHolidays").onclick = () => {
     if(!confirm("Limpar todos os feriados personalizados?")) return;
-    customHolidays=[]; save(); render(); checkDayWarning();
+    customHolidays=[]; editingHolidayId=null; els.addHoliday.textContent="Adicionar feriado"; save(); render(); checkDayWarning();
   };
 
   els.saveBtn.onclick=addOrUpdate;
   els.clearBtn.onclick=clearForm;
-  els.date.onchange=checkDayWarning;
+  [els.date,els.in1,els.outLunch,els.inLunch,els.out1].forEach(el=>el.addEventListener("input",checkDayWarning));
   els.month.onchange=render;
   els.target.onchange=render;
   window.addEventListener("resize", ()=>drawChart(monthRecords()));
@@ -1071,6 +1360,12 @@
     const del=e.target.getAttribute("data-del");
     if(edit) editRecord(edit);
     if(del) deleteRecord(del);
+  });
+  if(els.holidayList) els.holidayList.addEventListener("click", e=>{
+    const edit=e.target.getAttribute("data-edit-holiday");
+    const del=e.target.getAttribute("data-del-holiday");
+    if(edit){ const h=customHolidays.find(x=>(x.id||x.date)===edit); if(h){ editingHolidayId=edit; els.holidayDate.value=h.date; els.holidayName.value=h.name; els.addHoliday.textContent="Guardar feriado"; } }
+    if(del){ if(!confirm("Apagar este feriado personalizado?")) return; customHolidays=customHolidays.filter(x=>(x.id||x.date)!==del); save(); render(); checkDayWarning(); }
   });
 
   checkDayWarning();
